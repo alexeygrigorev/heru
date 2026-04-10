@@ -35,10 +35,29 @@ heru claude "find the bug in src/foo.py"
 
 # Deprecated for one release
 heru "find the bug in src/foo.py" --engine claude
+
+# Show usage for every supported provider with a usage endpoint
+heru usage
+
+# Show usage for one provider
+heru usage codex
+
+# Machine-readable output
+heru usage copilot --json
+
+# Gemini does not expose a usage endpoint yet
+heru usage gemini
 ```
 
 All output is streamed as unified JSONL by default. Pass `--raw` to get
 the engine's native JSON/JSONL stream back for debugging.
+
+`heru usage` prints one human-readable line per provider for `codex`,
+`claude`, `copilot`, and `zai`, including used, limit, remaining, unit,
+reset window, reset time, and any active block reason. `heru usage <name>`
+prints the same information for one provider. `--json` emits machine-readable
+JSON instead. `gemini` is accepted for the single-provider form and reports
+`unsupported` because it does not currently expose a usage endpoint.
 
 ## Unified Event Schema
 

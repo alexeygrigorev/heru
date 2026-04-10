@@ -4,9 +4,14 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import heru.quota as heru_quota
 from heru import ENGINE_CHOICES, get_engine
 from heru.base import CLIExecutionResult
 from heru.main import app, main
+from heru.quota.claude_quota import ClaudeQuotaStatus, ClaudeQuotaWindow
+from heru.quota.codex_quota import CodexQuotaStatus, CodexQuotaWindow
+from heru.quota.copilot_quota import CopilotQuotaStatus
+from heru.quota.zai_quota import ZaiQuotaStatus, ZaiQuotaWindow
 
 
 def test_heru_registry_exposes_all_engines() -> None:
@@ -357,3 +362,207 @@ def test_cli_resume_flow_reuses_continuation_id(monkeypatch, capsys, tmp_path: P
 
     assert second_events[0]["content"] == f"{engine_name} earlier discussed: hi"
     assert second_events[-1]["continuation_id"] == continuation_id
+
+
+def test_usage_without_provider_prints_supported_providers(monkeypatch, capsys) -> None:
+    runner = CliRunner()
+    monkeypatch.setattr(
+        heru_quota,
+        "check_codex_quota",
+        lambda: CodexQuotaStatus(
+            primary_window=CodexQuotaWindow(used_percent=62.0, reset_at="2026-04-11T00:00:00Z"),
+            secondary_window=CodexQuotaWindow(used_percent=48.0, reset_at="2026-04-12T00:00:00Z"),
+        ),
+    )
+    monkeypatch.setattr(heru_quota, "codex_quota_block_reason", lambda: None)
+    monkeypatch.setattr(
+        heru_quota,
+        "check_claude_quota",
+        lambda: ClaudeQuotaStatus(
+            five_hour=ClaudeQuotaWindow(used_percent=51.0, reset_at="2026-04-11T05:00:00Z"),
+            seven_day=ClaudeQuotaWindow(used_percent=20.0, reset_at="2026-04-17T00:00:00Z"),
+        ),
+    )
+    monkeypatch.setattr(heru_quota, "claude_quota_block_reason", lambda: None)
+    monkeypatch.setattr(
+        heru_quota,
+        "check_copilot_quota",
+        lambda: CopilotQuotaStatus(
+            premium_remaining=7,
+            premium_entitlement=20,
+            premium_percent_remaining=35.0,
+            quota_reset_date="2026-05-01",
+        ),
+    )
+    monkeypatch.setattr(heru_quota, "copilot_quota_block_reason", lambda: None)
+    monkeypatch.setattr(
+        heru_quota,
+        "check_zai_quota",
+        lambda: ZaiQuotaStatus(
+            api_calls=ZaiQuotaWindow(used_percent=33.0, window_hours=1, remaining=67, limit=100),
+            tokens=ZaiQuotaWindow(used_percent=50.0, window_hours=24, remaining=500, limit=1000),
+        ),
+    )
+    monkeypatch.setattr(heru_quota, "zai_quota_block_reason", lambda: None)
+
+    result = runner.invoke(app, ["usage"])
+
+    assert result.exit_code == 0
+    lines = result.stdout.strip().splitlines()
+    assert [line.split(":", 1)[0] for line in lines] == ["codex", "claude", "copilot", "zai"]
+    assert "used=62.0" in lines[0]
+    assert "limit=100.0" in lines[0]
+    assert "remaining=38.0" in lines[0]
+    assert "unit=percent" in lines[0]
+    assert "reset_window=primary_window" in lines[0]
+    assert "used=51.0" in lines[1]
+    assert "reset_window=five_hour" in lines[1]
+    assert "used=65.0" in lines[2]
+    assert "limit=20" in lines[2]
+    assert "remaining=7" in lines[2]
+    assert "unit=premium_interactions" in lines[2]
+    assert "used=500" in lines[3]
+    assert "limit=1000" in lines[3]
+    assert "remaining=500" in lines[3]
+    assert "unit=tokens" in lines[3]
+    assert "reset_window=24h" in lines[3]
+
+
+@pytest.mark.parametrize(
+    ("provider", "checker", "blocker", "status_obj", "expected_bits"),
+    [
+        (
+            "codex",
+            "check_codex_quota",
+            "codex_quota_block_reason",
+            CodexQuotaStatus(
+                primary_window=CodexQuotaWindow(used_percent=45.0, reset_at="2026-04-11T00:00:00Z"),
+                secondary_window=CodexQuotaWindow(used_percent=12.0, reset_at="2026-04-12T00:00:00Z"),
+            ),
+            ["status=ok", "used=45.0", "reset_window=primary_window"],
+        ),
+        (
+            "claude",
+            "check_claude_quota",
+            "claude_quota_block_reason",
+            ClaudeQuotaStatus(
+                five_hour=ClaudeQuotaWindow(used_percent=82.0, reset_at="2026-04-11T05:00:00Z"),
+                seven_day=ClaudeQuotaWindow(used_percent=30.0, reset_at="2026-04-17T00:00:00Z"),
+            ),
+            ["status=blocked", "used=82.0", "block_reason=claude limited"],
+        ),
+        (
+            "copilot",
+            "check_copilot_quota",
+            "copilot_quota_block_reason",
+            CopilotQuotaStatus(
+                premium_remaining=3,
+                premium_entitlement=10,
+                premium_percent_remaining=30.0,
+                quota_reset_date="2026-05-01",
+            ),
+            ["status=ok", "used=70.0", "reset_window=monthly"],
+        ),
+        (
+            "zai",
+            "check_zai_quota",
+            "zai_quota_block_reason",
+            ZaiQuotaStatus(
+                api_calls=ZaiQuotaWindow(used_percent=81.0, window_hours=1, remaining=19, limit=100),
+                tokens=ZaiQuotaWindow(used_percent=22.0, window_hours=24, remaining=780, limit=1000),
+            ),
+            ["status=blocked", "used=81", "block_reason=zai limited"],
+        ),
+    ],
+)
+def test_usage_single_provider_prints_selected_provider(
+    monkeypatch,
+    provider: str,
+    checker: str,
+    blocker: str,
+    status_obj: object,
+    expected_bits: list[str],
+) -> None:
+    runner = CliRunner()
+    monkeypatch.setattr(heru_quota, checker, lambda: status_obj)
+    monkeypatch.setattr(
+        heru_quota,
+        blocker,
+        lambda: "claude limited" if provider == "claude" else "zai limited" if provider == "zai" else None,
+    )
+
+    result = runner.invoke(app, ["usage", provider])
+
+    assert result.exit_code == 0
+    line = result.stdout.strip()
+    assert line.startswith(f"{provider}:")
+    for bit in expected_bits:
+        assert bit in line
+
+
+def test_usage_gemini_reports_unsupported() -> None:
+    runner = CliRunner()
+    result = runner.invoke(app, ["usage", "gemini"])
+
+    assert result.exit_code == 0
+    assert "gemini: status=unsupported" in result.stdout
+    assert "error=unsupported" in result.stdout
+
+
+def test_usage_unknown_provider_exits_non_zero() -> None:
+    runner = CliRunner()
+    result = runner.invoke(app, ["usage", "wat"])
+
+    assert result.exit_code == 1
+    assert "Unknown provider 'wat'." in result.stderr
+    for provider in ("codex", "claude", "copilot", "zai", "gemini"):
+        assert provider in result.stderr
+
+
+def test_usage_reports_missing_auth_without_crashing(monkeypatch) -> None:
+    runner = CliRunner()
+    monkeypatch.setattr(
+        heru_quota,
+        "check_codex_quota",
+        lambda: CodexQuotaStatus(error="no auth token"),
+    )
+    monkeypatch.setattr(heru_quota, "codex_quota_block_reason", lambda: None)
+
+    result = runner.invoke(app, ["usage", "codex"])
+
+    assert result.exit_code == 0
+    assert "codex: status=error" in result.stdout
+    assert "error=no auth token" in result.stdout
+    assert "used=unknown" in result.stdout
+
+
+def test_usage_json_outputs_json_objects(monkeypatch) -> None:
+    runner = CliRunner()
+    monkeypatch.setattr(
+        heru_quota,
+        "check_copilot_quota",
+        lambda: CopilotQuotaStatus(
+            premium_remaining=2,
+            premium_entitlement=10,
+            premium_percent_remaining=20.0,
+            quota_reset_date="2026-05-01",
+        ),
+    )
+    monkeypatch.setattr(
+        heru_quota,
+        "copilot_quota_block_reason",
+        lambda: "copilot premium requests low",
+    )
+
+    result = runner.invoke(app, ["usage", "copilot", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider"] == "copilot"
+    assert payload["status"] == "blocked"
+    assert payload["used"] == 80.0
+    assert payload["limit"] == 10
+    assert payload["remaining"] == 2
+    assert payload["unit"] == "premium_interactions"
+    assert payload["reset_window"] == "monthly"
+    assert payload["block_reason"] == "copilot premium requests low"
