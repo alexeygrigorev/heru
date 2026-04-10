@@ -32,6 +32,9 @@ heru codex --resume <session-id> "now also run the tests"
 
 # Different engine, same CLI shape
 heru claude "find the bug in src/foo.py"
+
+# Deprecated for one release
+heru "find the bug in src/foo.py" --engine claude
 ```
 
 All output is streamed as unified JSONL by default. Pass `--raw` to get
@@ -78,11 +81,8 @@ above are still in flight:
 
 - [x] Unified JSONL output format — `heru` now emits one documented
       event envelope across all supported engines by default.
-- [ ] Unified `--resume` across all engines — adapters all accept a
-      `resume_session_id` parameter, but the CLI layer hasn't been
-      unified to match.
-- [ ] Positional engine argument (`heru codex <prompt>`) — current CLI
-      uses `--engine codex`, will switch to positional.
+- [x] Unified `--resume` across all engines.
+- [x] Positional engine argument (`heru codex <prompt>`).
 - [ ] Standalone sandboxing — heru currently executes agents directly;
       sandbox integration is a follow-up.
 
