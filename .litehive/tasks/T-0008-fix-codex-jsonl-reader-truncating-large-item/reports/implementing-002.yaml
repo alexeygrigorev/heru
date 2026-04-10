@@ -1,0 +1,75 @@
+task_id: T-0008
+step: implementing
+verdict: pass
+source: agent
+summary: 'Bug and reproduction: Codex live unified rendering was reparsing the entire
+  incremental stdout snapshot on every 4096-byte read. A large single-line item.completed
+  payload with aggregated_output >8KB arrived across multiple reads, so intermediate
+  parses saw an incomplete trailing JSON object, logged unterminated/skip warnings
+  repeatedly, and withheld the completed event until the line finished. Expected behavior
+  is to buffer the trailing partial object during live updates and emit the completed
+  event once the full line arrives.'
+feedback: 'Bug and reproduction: Codex live unified rendering was reparsing the entire
+  incremental stdout snapshot on every 4096-byte read. A large single-line item.completed
+  payload with aggregated_output >8KB arrived across multiple reads, so intermediate
+  parses saw an incomplete trailing JSON object, logged unterminated/skip warnings
+  repeatedly, and withheld the completed event until the line finished. Expected behavior
+  is to buffer the trailing partial object during live updates and emit the completed
+  event once the full line arrives.
+
+
+  Root cause: the effective cap was not a fixed JSONL line limit inside the Codex
+  parser; it was the interaction between run_live() chunked reads in heru/base.py
+  and render_unified_output() reparsing partial stdout snapshots. iter_codex_payloads()
+  warned on any trailing buffered object at end-of-input, which is correct for final
+  parsing but wrong for incremental live snapshots.
+
+
+  Implementation: added an internal live-only payload path in ExternalCLIAdapter so
+  emit_unified updates use _render_live_unified_output() instead of the final-output
+  parser. Codex overrides that live path to call iter_codex_payloads(stdout, allow_incomplete_trailing=True),
+  which preserves an incomplete trailing object across updates without warning. Final
+  output still uses the normal parser, so a stream that truly ends mid-object logs
+  once and only once.
+
+
+  Regression coverage: added tests/test_codex_adapter_direct.py coverage for (1) run_live(...,
+  emit_unified=True) with tests/fixtures/codex_large_item_completed.jsonl containing
+  a >8KB aggregated_output line split across live reads, asserting the unified tool_result
+  includes the large output with no skip warnings, and (2) a truncated live Codex
+  payload, asserting only one unterminated warning is emitted.
+
+
+  Verification run: uv run pytest tests/test_codex_adapter_direct.py tests/test_base_direct.py
+  -q -> 22 passed; uv run pytest -q -> 234 passed; in ~/git/litehive, uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q -> 197 passed, 3 existing Typer deprecation warnings.
+  Acceptance criteria met: >8KB aggregated_output parses end-to-end, duplicate skip-log
+  spam is removed for the truncated-line case, regression coverage was added with
+  a large fixture, and litehive contract smoke tests still pass.'
+submitted_via_cli: true
+files_changed:
+- heru/adapters/_codex_impl.py
+- heru/adapters/codex.py
+- heru/base.py
+- tests/fixtures/codex_large_item_completed.jsonl
+- tests/test_codex_adapter_direct.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 228
+hook_results: []
+created_at: '2026-04-10T20:44:20+00:00'

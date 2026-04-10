@@ -1,0 +1,250 @@
+- role: recovery
+  step: grooming
+  verdict: comment
+  message: 'Recovery trigger `stale_runner_recovery`: Recovered stale runner state
+    and returned the task to `grooming`.
+
+    runnable_state: runnable
+
+    report: .litehive/tasks/T-0008-fix-codex-jsonl-reader-truncating-large-item/recovery/recovery-001.yaml'
+  files_changed: []
+  created_at: '2026-04-10T20:38:52+00:00'
+- role: planner
+  step: grooming
+  verdict: pass
+  message: 'Scoped the bug to the Codex live-stream parse path, not the stable public
+    API. Code inspection shows `ExternalCLIAdapter.run_live()` reads stdout in 4096-byte
+    chunks and calls `render_unified_output()` on every incremental snapshot; for
+    Codex, that reparses partial JSONL through `iter_codex_payloads()`. A large single-line
+    `item.completed` payload can therefore look like an unterminated/invalid JSON
+    object until the final chunk arrives, which explains both symptoms from the task:
+    repeated skip warnings from repeated reparsing, and downstream live/unified consumers
+    not seeing the completed event until the full line is present. Relevant paths:
+    `heru/base.py:304-445`, `heru/base.py:582-605`, `heru/adapters/_codex_impl.py:47-91`,
+    `heru/adapters/codex.py:150-154`.
+
+
+    Clarified bug/repro for implementation:
+
+    - Broken behavior: a Codex JSONL `item.completed` event with a large `aggregated_output`
+    field is split across live read chunks, treated as malformed during intermediate
+    parses, and logged repeatedly.
+
+    - Trigger: `run_live(..., emit_unified=True)` or any path that reparses partial
+    stdout snapshots before the full JSONL line has arrived.
+
+    - Expected behavior: incomplete trailing payloads should be carried forward without
+    warning spam, and once the full line arrives the `item.completed` event should
+    appear exactly once in unified/downstream output.
+
+
+    Execution plan for the SWE stage:
+
+    1. Reproduce with a focused regression around `run_live(..., emit_unified=True)`
+    using a fixture or synthetic Codex stdout where one `item.completed` line exceeds
+    8KB.
+
+    2. Apply the smallest fix at the streaming boundary or Codex parser boundary so
+    incomplete trailing payloads are buffered instead of warned on during incremental
+    updates.
+
+    3. Deduplicate malformed-line logging so one bad/truncated payload yields one
+    warning, not repeated warnings across overlapping parse layers.
+
+    4. Verify with targeted pytest for Codex/live parsing, then run the required Litehive
+    contract smoke tests.
+
+
+    Acceptance criteria status at grooming exit:
+
+    - Criteria are specific and testable as written.
+
+    - No code changes were made in this stage, so acceptance criteria are not yet
+    satisfied or re-verified here.
+
+    - No tests were run in grooming; verification is deferred to implementing/testing
+    stages.
+
+
+    PM sizing remains appropriate: `PM_COMPLEXITY: moderate`, `PLANNED_EFFORT: m`.
+    Residual risk to watch: a fix that only suppresses warnings without preserving
+    the trailing partial payload would hide the noise but still drop live events.'
+  files_changed: []
+  created_at: '2026-04-10T20:40:26+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Bug and reproduction: Codex live unified rendering was reparsing the entire
+    incremental stdout snapshot on every 4096-byte read. A large single-line item.completed
+    payload with aggregated_output >8KB arrived across multiple reads, so intermediate
+    parses saw an incomplete trailing JSON object, logged unterminated/skip warnings
+    repeatedly, and withheld the completed event until the line finished. Expected
+    behavior is to buffer the trailing partial object during live updates and emit
+    the completed event once the full line arrives.
+
+
+    Root cause: the effective cap was not a fixed JSONL line limit inside the Codex
+    parser; it was the interaction between run_live() chunked reads in heru/base.py
+    and render_unified_output() reparsing partial stdout snapshots. iter_codex_payloads()
+    warned on any trailing buffered object at end-of-input, which is correct for final
+    parsing but wrong for incremental live snapshots.
+
+
+    Implementation: added an internal live-only payload path in ExternalCLIAdapter
+    so emit_unified updates use _render_live_unified_output() instead of the final-output
+    parser. Codex overrides that live path to call iter_codex_payloads(stdout, allow_incomplete_trailing=True),
+    which preserves an incomplete trailing object across updates without warning.
+    Final output still uses the normal parser, so a stream that truly ends mid-object
+    logs once and only once.
+
+
+    Regression coverage: added tests/test_codex_adapter_direct.py coverage for (1)
+    run_live(..., emit_unified=True) with tests/fixtures/codex_large_item_completed.jsonl
+    containing a >8KB aggregated_output line split across live reads, asserting the
+    unified tool_result includes the large output with no skip warnings, and (2) a
+    truncated live Codex payload, asserting only one unterminated warning is emitted.
+
+
+    Verification run: uv run pytest tests/test_codex_adapter_direct.py tests/test_base_direct.py
+    -q -> 22 passed; uv run pytest -q -> 234 passed; in ~/git/litehive, uv run pytest
+    tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+    tests/test_codex_quota.py -q -> 197 passed, 3 existing Typer deprecation warnings.
+    Acceptance criteria met: >8KB aggregated_output parses end-to-end, duplicate skip-log
+    spam is removed for the truncated-line case, regression coverage was added with
+    a large fixture, and litehive contract smoke tests still pass.'
+  files_changed: []
+  created_at: '2026-04-10T20:44:07+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: "Verified the Codex live-stream regression fix against the stated acceptance\
+    \ criteria. I inspected the implementation and confirmed the root-cause fix is\
+    \ in the live unified parse path:  now uses a live-only unified renderer, and\
+    \  routes live parsing through  so incomplete trailing JSON is buffered during\
+    \ incremental reads instead of being warned on repeatedly. I also verified the\
+    \ regression fixture is real coverage for the failure mode:  is 9138 bytes, so\
+    \ it crosses the previous 4096-byte live-read boundary.\n\nTests run:\n- ......................\
+    \                                                   [100%]\n22 passed in 0.65s\
+    \ -> 22 passed\n- ........................................................................\
+    \ [ 36%]\n........................................................................\
+    \ [ 73%]\n.....................................................              \
+    \      [100%]\n=============================== warnings summary ===============================\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n.venv/lib/python3.12/site-packages/typer/params.py:946\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n  /home/alexey/git/litehive/.venv/lib/python3.12/site-packages/typer/params.py:946:\
+    \ DeprecationWarning: The 'is_flag' and 'flag_value' parameters are not supported\
+    \ by Typer and will be removed entirely in a future release.\n    return OptionInfo(\n\
+    \n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n197\
+    \ passed, 3 warnings in 15.82s -> 197 passed, 3 existing Typer deprecation warnings\n\
+    \nEvidence for acceptance criteria:\n- Large Codex  payloads parse end-to-end:\
+    \  passed and asserts the unified output contains a  with   and the large  payload\
+    \ ( followed by 8192 s).\n- Duplicate skip-log noise is removed for a single truncated\
+    \ line:  passed and asserts exactly one  warning is emitted.\n- Regression coverage\
+    \ exists with a dedicated >8KB fixture and direct live-stream exercise.\n- Required\
+    \ litehive contract smoke tests still pass.\n\nAssessment: PASS. Residual note:\
+    \ the new behavior is intentionally scoped to live unified rendering; final/full\
+    \ parsing still warns once for a truly truncated stream, which matches the expected\
+    \ behavior."
+  files_changed: []
+  created_at: '2026-04-10T20:45:41+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'QA pass. Verified the live-stream fix buffers incomplete trailing Codex
+    JSON during incremental unified rendering and emits a single warning for a truly
+    truncated final payload. Ran uv run pytest tests/test_codex_adapter_direct.py
+    tests/test_base_direct.py -q: 22 passed. Verified the >8KB regression fixture
+    is 9138 bytes and the new live test asserts unified output includes the large
+    tool_result payload with no skip warnings. Ran the required litehive smoke suite
+    in ~/git/litehive: 197 passed with 3 existing Typer deprecation warnings. Acceptance
+    criteria met: large aggregated_output parses end-to-end, malformed truncated line
+    logs once, regression fixture coverage exists, and litehive contract tests pass.'
+  files_changed: []
+  created_at: '2026-04-10T20:45:48+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. I verified the fix addresses the actual failure mode in the
+    Codex live unified parse path rather than masking symptoms. The code now routes
+    incremental run_live(..., emit_unified=True) rendering through a live-only payload
+    path in heru/base.py, and the Codex adapter uses iter_codex_payloads(stdout, allow_incomplete_trailing=True)
+    so a large trailing partial JSON object is buffered across read chunks instead
+    of being logged and skipped repeatedly. Final/full parsing still uses the normal
+    path, so a truly truncated stream warns once, which matches the task expectation.
+
+
+    Evidence I verified:
+
+    - The new regression fixture tests/fixtures/codex_large_item_completed.jsonl is
+    9138 bytes, so it exceeds the previous 4096-byte incremental read boundary involved
+    in the bug.
+
+    - uv run pytest tests/test_codex_adapter_direct.py tests/test_base_direct.py -q
+    passed with 22 passed in 0.64s.
+
+    - The large-payload regression test exercises live streaming with the payload
+    split at 4096 bytes and asserts the unified output contains the tool_result event
+    with the large aggregated output and no skip-warning spam.
+
+    - The truncated-payload regression test asserts exactly one unterminated JSON
+    object warning is emitted for a malformed/truncated line, which covers the duplicate
+    skip-log requirement.
+
+    - Required Litehive contract smoke tests passed: cd ~/git/litehive && uv run pytest
+    tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+    tests/test_codex_quota.py -q -> 197 passed, 3 warnings in 15.69s (existing Typer
+    deprecation warnings only).
+
+
+    Acceptance criteria status:
+
+    - Codex events with aggregated_output > 8KB parse successfully end-to-end: satisfied.
+
+    - No duplicate skip-log messages for a single malformed/truncated line: satisfied.
+
+    - Regression test with a fixture containing a large aggregated_output line: satisfied.
+
+    - Litehive contract tests still pass: satisfied.
+
+
+    Residual note: the warning suppression is intentionally limited to incremental
+    live parsing; a stream that actually ends mid-object still logs once on final
+    parse, which is the correct remaining behavior.'
+  files_changed: []
+  created_at: '2026-04-10T20:47:10+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: "Accepted. I verified the fix addresses the actual failure mode in the\
+    \ Codex live unified parse path rather than masking symptoms. The code now routes\
+    \ incremental  rendering through a live-only payload path in , and the Codex adapter\
+    \ uses  so a large trailing partial JSON object is buffered across read chunks\
+    \ instead of being logged and skipped repeatedly. Final/full parsing still uses\
+    \ the normal path, so a truly truncated stream warns once, which matches the task\
+    \ expectation.\\n\\nEvidence I verified:\\n- The new regression fixture  is 9138\
+    \ bytes, so it exceeds the previous 4096-byte incremental read boundary involved\
+    \ in the bug.\\n- ......................                                     \
+    \              [100%]\n22 passed in 0.65s passed with .\\n- The large-payload\
+    \ regression test exercises live streaming with the payload split at 4096 bytes\
+    \ and asserts the unified output contains the  event with the large aggregated\
+    \ output and no skip-warning spam.\\n- The truncated-payload regression test asserts\
+    \ exactly one  warning is emitted for a malformed/truncated line, which covers\
+    \ the duplicate skip-log requirement.\\n- Required Litehive contract smoke tests\
+    \ passed: ........................................................................\
+    \ [ 36%]\n........................................................................\
+    \ [ 73%]\n.....................................................              \
+    \      [100%]\n=============================== warnings summary ===============================\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n.venv/lib/python3.12/site-packages/typer/params.py:946\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n  /home/alexey/git/litehive/.venv/lib/python3.12/site-packages/typer/params.py:946:\
+    \ DeprecationWarning: The 'is_flag' and 'flag_value' parameters are not supported\
+    \ by Typer and will be removed entirely in a future release.\n    return OptionInfo(\n\
+    \n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n197\
+    \ passed, 3 warnings in 15.78s ->  (existing Typer deprecation warnings only).\\\
+    n\\nAcceptance criteria status:\\n- Codex events with aggregated_output > 8KB\
+    \ parse successfully end-to-end: satisfied.\\n- No duplicate skip-log messages\
+    \ for a single malformed/truncated line: satisfied.\\n- Regression test with a\
+    \ fixture containing a large aggregated_output line: satisfied.\\n- Litehive contract\
+    \ tests still pass: satisfied.\\n\\nResidual note: the warning suppression is\
+    \ intentionally limited to incremental live parsing; a stream that actually ends\
+    \ mid-object still logs once on final parse, which is the correct remaining behavior."
+  files_changed: []
+  created_at: '2026-04-10T20:47:13+00:00'

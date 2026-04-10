@@ -7,36 +7,32 @@ task_type: null
 model: null
 mode: implementation
 pipeline_mode: full
-status: in_progress
+status: done
 flag_reason: null
 flag_count: 0
-pipeline_status: commit_to_git
+pipeline_status: done
 priority: medium
 pm_complexity: moderate
 planned_effort: m
 created_at: '2026-04-10T18:53:28+00:00'
-updated_at: '2026-04-10T20:38:30+00:00'
-goal: 'The pre-commit hook (T-0005) runs litehive''s contract tests before commits,
-  which is great but requires litehive to be present. For heru standalone users and
-  CI environments without litehive, mirror the critical contract tests into heru''s
-  own test suite under tests/contract/. These test heru''s public API directly (build_invocation
-  returns the right argv shape, extract_usage_observation parses fixture payloads
-  correctly, extract_continuation returns the expected session ids, ExternalCLIAdapter.run
-  handles timeouts correctly, etc). They are complementary to the litehive-based pre-commit
-  hook, not replacements. The difference: tests/contract/ runs in heru alone, the
-  litehive hook runs integration scenarios that need litehive scaffolding.'
+updated_at: '2026-04-10T20:38:46+00:00'
+goal: "Split heru's test layout into two top-level folders: (1) tests/ \u2014 standalone,\
+  \ fixture-only, no 'from litehive' imports, no real subprocess calls to engine CLIs;\
+  \ runs in heru's own venv via 'uv run pytest tests/'. (2) tests_integration/ \u2014\
+  \ contract tests that import/exercise litehive and may call real engine CLIs; these\
+  \ guard the public API contract that litehive depends on and are NOT run by default.\
+  \ Move any contract-style tests that currently violate the tests/ standalone rule\
+  \ into tests_integration/. Update CLAUDE.md and .litehive/context.md to document\
+  \ the split and update the pre-commit / contract-test invocation to include tests_integration/\
+  \ where appropriate."
 acceptance_criteria:
-- 'tests/contract/ subdirectory exists with at least 30 tests exercising the public
-  API surface: ExternalCLIAdapter methods, each adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation,
-  the public type constructors in heru.types'
-- "Every test in tests/contract/ uses only fixture-based inputs \u2014 no real engine\
-  \ subprocess, no network. Pure unit tests against the public API"
-- "README explains that tests/contract/ is the 'thou shalt not break' suite \u2014\
-  \ any PR that changes a test in this directory is a semver-major breaking change\
-  \ and requires the checklist in T-0006 (CHANGELOG, migration note, version bump)"
-- tests/contract/ is wired into the default pytest run ('uv run pytest' picks it up)
-- These tests pass on a completely fresh venv with only heru and pytest installed
-  (no litehive, no engine CLIs, no network)
+- tests/ contains zero 'from litehive' imports and zero real engine subprocess calls
+- tests_integration/ exists at repo root with at least one contract test mirroring
+  litehive's public-API expectations of heru
+- CLAUDE.md documents the tests/ vs tests_integration/ split and when each runs
+- .litehive/context.md updated to reflect the new layout
+- uv run pytest tests/ still passes standalone (no litehive checkout needed)
+- litehive's own contract test suite still passes when run from ~/git/litehive
 constraints: []
 plan: []
 human_checkpoints: []
@@ -72,9 +68,9 @@ subagents:
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0007 add-tests-contract-subfolder-mirroring-litehive-s'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
+  commit_sha: 5b2def20ce6cfae9e1ac4115ffd7f309748f6bc5
+  checkpoint_base_sha: 10f75dacf06438400bf80fcd111f4c9dd711cfd2
+  checkpoint_attempts: 1
   rolled_back_checkpoint_attempt: null
   merge_agent_attempts: 0
   worktree_path: null

@@ -1,0 +1,392 @@
+Task: T-0008 Fix codex JSONL reader truncating large item.completed events
+Stage: accepting
+Stage owner: reviewer
+Process profile: Python
+Task type: bugfix
+
+Workspace context:
+# heru — Litehive Workspace Context
+
+Process profile: Python
+
+You are editing **heru**, a unified headless CLI for coding agents
+(codex, claude, copilot, gemini, opencode, goz). Read this whole file
+before touching any file in this repository.
+
+## Project
+
+- **Purpose:** a thin adapter layer that wraps each supported agent CLI
+  behind a uniform Python interface, with a unified `heru <engine>
+  <prompt>` command, one JSONL event schema across engines, and one
+  resume mechanism. heru is the engine-I/O layer; it knows nothing
+  about task queues, stages, orchestration, or sandboxing — those are
+  litehive concerns.
+- **Main package:** `heru/` (at the repo root, below `.git/`). Public
+  API lives in `heru/__init__.py`, `heru/base.py`, `heru/types.py`,
+  and each `heru/adapters/<engine>.py`. Anything prefixed with `_` is
+  internal.
+- **Commands to know:**
+  - `uv sync --extra dev` — install heru's own venv
+  - `uv run pytest` — heru's standalone test suite
+  - `uv run heru <engine> <prompt>` — the CLI (WIP per task T-0002)
+  - `cd ~/git/litehive && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py` — **litehive contract smoke tests; run before every commit**
+
+## Directory layout
+
+```
+heru/
+├── heru/                  # the Python package
+│   ├── __init__.py        # get_engine, ENGINE_CHOICES — PUBLIC
+│   ├── base.py            # ExternalCLIAdapter, CLIInvocation, run_live — PUBLIC
+│   ├── types.py           # shared pydantic types — PUBLIC
+│   ├── main.py            # `heru <engine> <prompt>` CLI entry — PUBLIC
+│   ├── _engine_detection.py   # internal
+│   ├── _continuation.py       # internal
+│   ├── adapters/
+│   │   ├── codex.py, _codex_impl.py         # CodexCLIAdapter PUBLIC, _impl internal
+│   │   ├── claude.py, _claude_impl.py
+│   │   ├── copilot.py, _copilot_impl.py
+│   │   ├── gemini.py, _gemini_impl.py
+│   │   ├── opencode.py, _opencode_impl.py
+│   │   ├── goz.py, _goz_impl.py
+│   │   └── common.py      # shared helpers
+│   └── quota/             # per-provider quota check helpers — PUBLIC
+├── tests/                 # heru's standalone unit tests (no litehive imports)
+├── pyproject.toml
+├── README.md
+└── .litehive/             # this workspace (tasks, state)
+```
+
+## Public API surface — do not break without a semver bump
+
+Anything **not** prefixed with `_` is public. Changing the signature,
+return type, or behavior of any of the following is a **semver-major**
+breaking change that requires a version bump in `pyproject.toml`, a
+CHANGELOG entry, and a migration note for litehive:
+
+- `heru.get_engine(name)`, `heru.ENGINE_CHOICES`
+- `heru.base.ExternalCLIAdapter` (subclass, don't modify shape)
+- `heru.base.CLIInvocation`, `heru.base.CLIExecutionResult`
+- Each adapter class: `CodexCLIAdapter`, `ClaudeCLIAdapter`,
+  `CopilotCLIAdapter`, `GeminiCLIAdapter`, `OpencodeCLIAdapter`,
+  `GozCLIAdapter`
+- Every pydantic model in `heru/types.py`
+- `heru.main.main` (the CLI entry)
+
+**Internal** (change freely, no semver implications): every
+`_`-prefixed module, every private method on public classes, and the
+exact text of rendered transcripts.
+
+## Hard rules — do NOT break these
+
+1. **No imports from `litehive`.** heru is a leaf package. One runtime
+   dep: `pydantic`. If your diff adds `from litehive …`, stop — the
+   code belongs in litehive, not heru.
+
+2. **Do not break litehive.** litehive depends on heru via an editable
+   path install, so every heru change propagates immediately. Before
+   you finish any stage that touched code, you MUST run:
+   ```
+   cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py \
+       tests/test_engine_variants_and_timeline.py \
+       tests/test_heru_cli.py tests/test_codex_quota.py -q
+   ```
+   If any fail, your change broke the contract. Either fix heru to
+   preserve the contract, or explicitly call out the breakage in your
+   stage report with a proposed litehive-side migration.
+
+3. **Stage reports are a litehive concept, not heru's.** `StageReport`,
+   `StageResultSubmission`, `StageResultTests`, and `TaskUpdateSubmission`
+   currently live in `heru/types.py` as a temporary compromise — they
+   are slated to move to litehive. Do not add new stage-report logic
+   or fields inside heru. If your task requires you to edit stage
+   report semantics, flag it back: it is misfiled and belongs in
+   litehive.
+
+4. **Tests must be standalone.** No test under `tests/` may import
+   from `litehive`. Every heru test must run in a fresh venv with
+   only `heru + pydantic + pytest` installed. For JSONL fixtures,
+   hand-craft strings or files under `tests/fixtures/` — do NOT
+   shell out to real engine CLIs during tests.
+
+5. **Respect the contract tests** (once `tests/contract/` exists per
+   T-0007). Changing an assertion in `tests/contract/` is by
+   definition a breaking change and requires the full semver
+   checklist.
+
+6. **Every new adapter needs both a public class AND a `_impl` helper
+   module.** Shape: `adapters/<engine>.py` for the public class,
+   `adapters/_<engine>_impl.py` for parsing/quota internals. Keep the
+   symmetry — the base class expects it.
+
+## Before you write code — ask yourself
+
+- **Is this a heru concern or a litehive concern?** If you need task
+  queues, retries, worktrees, commit pipelines, sandbox profiles, or
+  the `STAGE_RESULT:` agent protocol, this is probably litehive.
+  Stop and surface the concern in grooming.
+- **Does this change the public API?** If yes, note the intended
+  semver bump in your report and explicitly list what litehive needs
+  to update.
+- **Can I write this as a fixture-driven unit test?** If not, your
+  code is probably too coupled to the real CLI subprocess — refactor
+  to take parsed inputs.
+- **Have I run the litehive contract tests?** If not, the task is not
+  done, no matter what your implementation report says.
+
+## Relationship to litehive
+
+heru is maintained **alongside** litehive at `~/git/litehive`. They
+share a developer (you) and live on the same laptop. litehive depends
+on heru via `uv add --editable ~/git/heru`, so every heru save is
+immediately visible to litehive without any reinstall.
+
+**If a heru task requires changes in litehive to stay consistent**
+(e.g. adding a new adapter method that litehive needs to call), open
+a companion task in the litehive workspace referencing this task,
+and land the heru side FIRST. Litehive can then safely bump its own
+expectations.
+
+## Process overlay
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+## Project overlay
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+## Init scaffold
+- Scaffold `.litehive/context.md` from the generic base process template.
+- Layer the project profile summary, workspace overlay, and stage overlay onto that base.
+- Treat process profiles as overlays on the shared contract rather than separate workflows.
+- Keep the task/issue source of truth, verification commands, and recovery policy visible in the scaffold.
+- Seed Python workspaces with package layout, test entrypoints, and `uv` or virtualenv expectations.
+
+## Prompt scaffold
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+## Stage prompt scaffolding
+
+### grooming
+Act as the planner: clarify the user problem, inspect the repo if needed, and produce a concrete execution plan.
+Focus on scope clarification, acceptance criteria quality, decomposition, follow-up tasks, and PM sizing.
+Do not make code changes in this stage.
+
+### implementing
+Implement the task in this repository.
+Keep changes tightly scoped and complete the work needed for the acceptance criteria.
+Write tests so each assertion would fail if the feature is broken.
+Do not spend test coverage on framework behavior or library guarantees.
+Do not add tests that only restate defaults, constants, or static data.
+Keep each test focused on one behavior.
+Avoid duplicate coverage; extend an existing test only when it is the same behavior.
+- Write or update focused tests alongside the code change when feasible.
+- Use `pytest` for automated verification.
+- Use `tmp_path` or pytest fixtures instead of manual tempfiles in repo code or `/tmp` setup.
+- Mock external calls and integration edges, not the internal logic under test.
+- Do not use `time.sleep` in tests; use deterministic synchronization or time control.
+
+### testing
+Validate the implementation.
+Run focused checks or tests where possible and report failures precisely.
+Only make minimal fixes if absolutely necessary.
+Reject tests whose assertions would still pass if the feature were broken.
+Reject tests that duplicate existing coverage instead of covering a new behavior.
+Reject tests longer than 50 lines unless a shorter structure is genuinely impossible.
+Reject monolithic tests that exercise 5 or more behaviors in one flow.
+- Prefer targeted `pytest` invocations before broader test commands.
+- Verify new or updated tests use `pytest` idioms and fixtures.
+- Reject tests that use manual tempfiles where `tmp_path` would make isolation explicit.
+- Reject tests that mock the unit's internal logic instead of external boundaries.
+- Reject tests that rely on `time.sleep` instead of deterministic control.
+
+### accepting
+Act as the reviewer: validate the end-user outcome against the acceptance criteria and decide whether it should be accepted or sent back.
+Be strict about regression detection, evidence quality, and final done versus not-done judgment.
+
+## Python specifics
+- Prefer `pytest` for automated verification.
+- Keep module boundaries and import hygiene clear.
+- Record virtualenv, `uv`, or toolchain expectations when they matter.
+
+## Development rules
+- Keep changes scoped to the current task.
+- Prefer targeted tests over broad test suites.
+- Record assumptions clearly in the final report.
+
+## Tool usage
+- Use `uv run pytest -q` for the current smoke test suite.
+- Update litehive task artifacts instead of inventing external state stores.
+- If you add a new command or workflow, document it here for future runs.
+
+Shared process:
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+Project overlay:
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+Prompt scaffold:
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+Role focus:
+- You are the reviewer, a PM-style role representing the user's and product's point of view.
+- Validate the strict end-user outcome, look for regressions or missing evidence, and make a final done versus not-done judgment.
+- Reject work that is incomplete, weakly verified, or misaligned with the promised outcome.
+- If SWE shows the requested work was already implemented before this run and provides concrete verification evidence, accept the task to normal `done` rather than inventing a special closed status.
+- Use `wont_do`, `duplicate`, or `deferred` only when the task is genuinely obsolete, superseded, or duplicated.
+- You may close a task as duplicate, wont_do, or deferred by including `outcome: <status>` with optional `outcome_reason` in a TASK_UPDATE block. You may park a task with `action: park`.
+
+Stage instructions:
+Act as the reviewer: validate the end-user outcome against the acceptance criteria and decide whether it should be accepted or sent back.
+Be strict about regression detection, evidence quality, and final done versus not-done judgment.
+
+Goal:
+heru's codex adapter reader truncates JSONL lines containing large aggregated_output fields, producing 'Unterminated string' parse errors and silently dropping item.completed events. Find the line-length / buffer cap in the codex stream reader and raise or remove it so full events make it to downstream consumers. Also dedupe the skip-logging: each truncated line is currently logged 6-10 times by overlapping layers (codex:, iter_jsonl_payloads:).
+
+Acceptance criteria:
+- Codex events with aggregated_output > 8KB parse successfully end-to-end
+- No duplicate skip-log messages for a single malformed/truncated line
+- Regression test with a fixture containing a large aggregated_output line
+- litehive contract tests still pass
+
+Task template:
+- Use the `bugfix` template to keep the task structured.
+- Describe the broken behavior, trigger, and expected correct behavior before changing code.
+- Aim at root cause, not just the visible symptom.
+- Include regression coverage or equivalent focused proof that the failure is gone.
+
+Template sections to fill or verify:
+- Bug and reproduction: describe the failing behavior, trigger, and expected result.
+- Root cause: note the suspected or confirmed cause in the affected path.
+- Regression coverage: record the exact test or check that prevents recurrence.
+
+Plan:
+- Reproduce or localize the failing behavior.
+- Implement the minimal targeted fix.
+- Run focused regression coverage for the affected behavior.
+
+PM sizing:
+- Current PM complexity: moderate
+- Current planned effort: m
+
+Constraints:
+- Prefer the smallest change that removes the failure mode.
+- Call out any remaining edge cases or follow-up risk explicitly.
+
+
+Discussion thread:
+
+--- [2026-04-10T20:38:52+00:00] recovery (grooming) — comment ---
+Recovery trigger `stale_runner_recovery`: Recovered stale runner state and returned the task to `grooming`.
+runnable_state: runnable
+report: .litehive/tasks/T-0008-fix-codex-jsonl-reader-truncating-large-item/recovery/recovery-001.yaml
+
+--- [2026-04-10T20:40:26+00:00] planner (grooming) — pass ---
+Scoped the bug to the Codex live-stream parse path, not the stable public API. Code inspection shows `ExternalCLIAdapter.run_live()` reads stdout in 4096-byte chunks and calls `render_unified_output()` on every incremental snapshot; for Codex, that reparses partial JSONL through `iter_codex_payloads()`. A large single-line `item.completed` payload can therefore look like an unterminated/invalid JSON object until the final chunk arrives, which explains both symptoms from the task: repeated skip warnings from repeated reparsing, and downstream live/unified consumers not seeing the completed event until the full line is present. Relevant paths: `heru/base.py:304-445`, `heru/base.py:582-605`, `heru/adapters/_codex_impl.py:47-91`, `heru/adapters/codex.py:150-154`.
+
+Clarified bug/repro for implementation:
+- Broken behavior: a Codex JSONL `item.completed` event with a large `aggregated_output` field is split across live read chunks, treated as malformed during intermediate parses, and logged repeatedly.
+- Trigger: `run_live(..., emit_unified=True)` or any path that reparses partial stdout snapshots before the full JSONL line has arrived.
+- Expected behavior: incomplete trailing payloads should be carried forward without warning spam, and once the full line arrives the `item.completed` event should appear exactly once in unified/downstream output.
+
+Execution plan for the SWE stage:
+1. Reproduce with a focused regression around `run_live(..., emit_unified=True)` using a fixture or synthetic Codex stdout where one `item.completed` line exceeds 8KB.
+2. Apply the smallest fix at the streaming boundary or Codex parser boundary so incomplete trailing payloads are buffered instead of warned on during incremental updates.
+3. Deduplicate malformed-line logging so one bad/truncated payload yields one warning, not repeated warnings across overlapping parse layers.
+4. Verify with targeted pytest for Codex/live parsing, then run the required Litehive contract smoke tests.
+
+Acceptance criteria status at grooming exit:
+- Criteria are specific and testable as written.
+- No code changes were made in this stage, so acceptance criteria are not yet satisfied or re-verified here.
+- No tests were run in grooming; verification is deferred to implementing/testing stages.
+
+PM sizing remains appropriate: `PM_COMPLEXITY: moderate`, `PLANNED_EFFORT: m`. Residual risk to watch: a fix that only suppresses warnings without preserving the trailing partial payload would hide the noise but still drop live events.
+
+--- [2026-04-10T20:44:07+00:00] swe (implementing) — pass ---
+Bug and reproduction: Codex live unified rendering was reparsing the entire incremental stdout snapshot on every 4096-byte read. A large single-line item.completed payload with aggregated_output >8KB arrived across multiple reads, so intermediate parses saw an incomplete trailing JSON object, logged unterminated/skip warnings repeatedly, and withheld the completed event until the line finished. Expected behavior is to buffer the trailing partial object during live updates and emit the completed event once the full line arrives.
+
+Root cause: the effective cap was not a fixed JSONL line limit inside the Codex parser; it was the interaction between run_live() chunked reads in heru/base.py and render_unified_output() reparsing partial stdout snapshots. iter_codex_payloads() warned on any trailing buffered object at end-of-input, which is correct for final parsing but wrong for incremental live snapshots.
+
+Implementation: added an internal live-only payload path in ExternalCLIAdapter so emit_unified updates use _render_live_unified_output() instead of the final-output parser. Codex overrides that live path to call iter_codex_payloads(stdout, allow_incomplete_trailing=True), which preserves an incomplete trailing object across updates without warning. Final output still uses the normal parser, so a stream that truly ends mid-object logs once and only once.
+
+Regression coverage: added tests/test_codex_adapter_direct.py coverage for (1) run_live(..., emit_unified=True) with tests/fixtures/codex_large_item_completed.jsonl containing a >8KB aggregated_output line split across live reads, asserting the unified tool_result includes the large output with no skip warnings, and (2) a truncated live Codex payload, asserting only one unterminated warning is emitted.
+
+Verification run: uv run pytest tests/test_codex_adapter_direct.py tests/test_base_direct.py -q -> 22 passed; uv run pytest -q -> 234 passed; in ~/git/litehive, uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, 3 existing Typer deprecation warnings. Acceptance criteria met: >8KB aggregated_output parses end-to-end, duplicate skip-log spam is removed for the truncated-line case, regression coverage was added with a large fixture, and litehive contract smoke tests still pass.
+
+--- [2026-04-10T20:45:41+00:00] qa (testing) — pass ---
+Verified the Codex live-stream regression fix against the stated acceptance criteria. I inspected the implementation and confirmed the root-cause fix is in the live unified parse path:  now uses a live-only unified renderer, and  routes live parsing through  so incomplete trailing JSON is buffered during incremental reads instead of being warned on repeatedly. I also verified the regression fixture is real coverage for the failure mode:  is 9138 bytes, so it crosses the previous 4096-byte live-read boundary.
+
+Tests run:
+- ......................                                                   [100%]
+22 passed in 0.65s -> 22 passed
+- ........................................................................ [ 36%]
+........................................................................ [ 73%]
+.....................................................                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/typer/params.py:946
+.venv/lib/python3.12/site-packages/typer/params.py:946
+.venv/lib/python3.12/site-packages/typer/params.py:946
+  /home/alexey/git/litehive/.venv/lib/python3.12/site-packages/typer/params.py:946: DeprecationWarning: The 'is_flag' and 'flag_value' parameters are not supported by Typer and will be removed entirely in a future release.
+    return OptionInfo(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+197 passed, 3 warnings in 15.82s -> 197 passed, 3 existing Typer deprecation warnings
+
+Evidence for acceptance criteria:
+- Large Codex  payloads parse end-to-end:  passed and asserts the unified output contains a  with   and the large  payload ( followed by 8192 s).
+- Duplicate skip-log noise is removed for a single truncated line:  passed and asserts exactly one  warning is emitted.
+- Regression coverage exists with a dedicated >8KB fixture and direct live-stream exercise.
+- Required litehive contract smoke tests still pass.
+
+Assessment: PASS. Residual note: the new behavior is intentionally scoped to live unified rendering; final/full parsing still warns once for a truly truncated stream, which matches the expected behavior.
+
+--- [2026-04-10T20:45:48+00:00] qa (testing) — pass ---
+QA pass. Verified the live-stream fix buffers incomplete trailing Codex JSON during incremental unified rendering and emits a single warning for a truly truncated final payload. Ran uv run pytest tests/test_codex_adapter_direct.py tests/test_base_direct.py -q: 22 passed. Verified the >8KB regression fixture is 9138 bytes and the new live test asserts unified output includes the large tool_result payload with no skip warnings. Ran the required litehive smoke suite in ~/git/litehive: 197 passed with 3 existing Typer deprecation warnings. Acceptance criteria met: large aggregated_output parses end-to-end, malformed truncated line logs once, regression fixture coverage exists, and litehive contract tests pass.
+
+IMPORTANT: When you are done, you MUST submit your verdict by running:
+  litehive report --verdict <pass|reject> --role reviewer --step accepting --message "<your report>"
+The environment variable LITEHIVE_TASK_ID is set to T-0008 for this session. Workspace and task resolution should use the injected environment automatically.
+
+Your --message is the PRIMARY way the next agent understands what happened.
+Do NOT rely on your raw transcript being read — write the report as if it is the only thing the next agent will see.
+
+Report requirements:
+- On PASS/ACCEPT: explain what you verified, what tests you ran, what evidence confirms the acceptance criteria are met.
+- On REJECT: you MUST include ALL of the following:
+  1. EXPECTED behavior: what should happen according to the acceptance criteria
+  2. OBSERVED behavior: what actually happens (exact error messages, test output, wrong values)
+  3. Steps to reproduce: the exact command or test that demonstrates the gap
+  4. Which acceptance criteria are not met and which ones are already satisfied
+
+A vague rejection like 'tests fail' or 'missing evidence' is useless and causes infinite loops.
+A good rejection looks like: 'Expected: `litehive engine gemini` switches the default engine and prints confirmation. Observed: command exits 0 but config.yaml still shows the old engine. Reproduce: run `litehive engine gemini` then `cat .litehive/config.yaml`. Criteria 1-3 are met, criterion 4 (persistence) is not.'

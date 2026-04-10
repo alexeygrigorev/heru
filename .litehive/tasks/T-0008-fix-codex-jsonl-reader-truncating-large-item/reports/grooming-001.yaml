@@ -1,0 +1,90 @@
+task_id: T-0008
+step: grooming
+verdict: pass
+source: agent
+summary: 'Scoped the bug to the Codex live-stream parse path, not the stable public
+  API. Code inspection shows `ExternalCLIAdapter.run_live()` reads stdout in 4096-byte
+  chunks and calls `render_unified_output()` on every incremental snapshot; for Codex,
+  that reparses partial JSONL through `iter_codex_payloads()`. A large single-line
+  `item.completed` payload can therefore look like an unterminated/invalid JSON object
+  until the final chunk arrives, which explains both symptoms from the task: repeated
+  skip warnings from repeated reparsing, and downstream live/unified consumers not
+  seeing the completed event until the full line is present. Relevant paths: `heru/base.py:304-445`,
+  `heru/base.py:582-605`, `heru/adapters/_codex_impl.py:47-91`, `heru/adapters/codex.py:150-154`.'
+feedback: 'Scoped the bug to the Codex live-stream parse path, not the stable public
+  API. Code inspection shows `ExternalCLIAdapter.run_live()` reads stdout in 4096-byte
+  chunks and calls `render_unified_output()` on every incremental snapshot; for Codex,
+  that reparses partial JSONL through `iter_codex_payloads()`. A large single-line
+  `item.completed` payload can therefore look like an unterminated/invalid JSON object
+  until the final chunk arrives, which explains both symptoms from the task: repeated
+  skip warnings from repeated reparsing, and downstream live/unified consumers not
+  seeing the completed event until the full line is present. Relevant paths: `heru/base.py:304-445`,
+  `heru/base.py:582-605`, `heru/adapters/_codex_impl.py:47-91`, `heru/adapters/codex.py:150-154`.
+
+
+  Clarified bug/repro for implementation:
+
+  - Broken behavior: a Codex JSONL `item.completed` event with a large `aggregated_output`
+  field is split across live read chunks, treated as malformed during intermediate
+  parses, and logged repeatedly.
+
+  - Trigger: `run_live(..., emit_unified=True)` or any path that reparses partial
+  stdout snapshots before the full JSONL line has arrived.
+
+  - Expected behavior: incomplete trailing payloads should be carried forward without
+  warning spam, and once the full line arrives the `item.completed` event should appear
+  exactly once in unified/downstream output.
+
+
+  Execution plan for the SWE stage:
+
+  1. Reproduce with a focused regression around `run_live(..., emit_unified=True)`
+  using a fixture or synthetic Codex stdout where one `item.completed` line exceeds
+  8KB.
+
+  2. Apply the smallest fix at the streaming boundary or Codex parser boundary so
+  incomplete trailing payloads are buffered instead of warned on during incremental
+  updates.
+
+  3. Deduplicate malformed-line logging so one bad/truncated payload yields one warning,
+  not repeated warnings across overlapping parse layers.
+
+  4. Verify with targeted pytest for Codex/live parsing, then run the required Litehive
+  contract smoke tests.
+
+
+  Acceptance criteria status at grooming exit:
+
+  - Criteria are specific and testable as written.
+
+  - No code changes were made in this stage, so acceptance criteria are not yet satisfied
+  or re-verified here.
+
+  - No tests were run in grooming; verification is deferred to implementing/testing
+  stages.
+
+
+  PM sizing remains appropriate: `PM_COMPLEXITY: moderate`, `PLANNED_EFFORT: m`. Residual
+  risk to watch: a fix that only suppresses warnings without preserving the trailing
+  partial payload would hide the noise but still drop live events.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 97
+hook_results: []
+created_at: '2026-04-10T20:40:31+00:00'

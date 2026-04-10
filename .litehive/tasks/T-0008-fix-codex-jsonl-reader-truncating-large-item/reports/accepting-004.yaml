@@ -1,0 +1,64 @@
+task_id: T-0008
+step: accepting
+verdict: pass
+source: agent
+summary: Accepted. I verified the fix addresses the actual failure mode in the Codex
+  live unified parse path rather than masking symptoms. The code now routes incremental  rendering
+  through a live-only payload path in , and the Codex adapter uses  so a large trailing
+  partial JSON object is buffered across read chunks instead of being logged and skipped
+  repeatedly. Final/full parsing still uses the normal path, so a truly truncated
+  stream warns once, which matches the task expectation.\n\nEvidence I verified:\n-
+  The new regression fixture  is 9138 bytes, so it exceeds the previous 4096-byte
+  incremental read boundary involved in the bug.\n- ......................                                                   [100%]
+feedback: "Accepted. I verified the fix addresses the actual failure mode in the Codex\
+  \ live unified parse path rather than masking symptoms. The code now routes incremental\
+  \  rendering through a live-only payload path in , and the Codex adapter uses  so\
+  \ a large trailing partial JSON object is buffered across read chunks instead of\
+  \ being logged and skipped repeatedly. Final/full parsing still uses the normal\
+  \ path, so a truly truncated stream warns once, which matches the task expectation.\\\
+  n\\nEvidence I verified:\\n- The new regression fixture  is 9138 bytes, so it exceeds\
+  \ the previous 4096-byte incremental read boundary involved in the bug.\\n- ......................\
+  \                                                   [100%]\n22 passed in 0.65s passed\
+  \ with .\\n- The large-payload regression test exercises live streaming with the\
+  \ payload split at 4096 bytes and asserts the unified output contains the  event\
+  \ with the large aggregated output and no skip-warning spam.\\n- The truncated-payload\
+  \ regression test asserts exactly one  warning is emitted for a malformed/truncated\
+  \ line, which covers the duplicate skip-log requirement.\\n- Required Litehive contract\
+  \ smoke tests passed: ........................................................................\
+  \ [ 36%]\n........................................................................\
+  \ [ 73%]\n.....................................................                \
+  \    [100%]\n=============================== warnings summary ===============================\n\
+  .venv/lib/python3.12/site-packages/typer/params.py:946\n.venv/lib/python3.12/site-packages/typer/params.py:946\n\
+  .venv/lib/python3.12/site-packages/typer/params.py:946\n  /home/alexey/git/litehive/.venv/lib/python3.12/site-packages/typer/params.py:946:\
+  \ DeprecationWarning: The 'is_flag' and 'flag_value' parameters are not supported\
+  \ by Typer and will be removed entirely in a future release.\n    return OptionInfo(\n\
+  \n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n197 passed,\
+  \ 3 warnings in 15.78s ->  (existing Typer deprecation warnings only).\\n\\nAcceptance\
+  \ criteria status:\\n- Codex events with aggregated_output > 8KB parse successfully\
+  \ end-to-end: satisfied.\\n- No duplicate skip-log messages for a single malformed/truncated\
+  \ line: satisfied.\\n- Regression test with a fixture containing a large aggregated_output\
+  \ line: satisfied.\\n- Litehive contract tests still pass: satisfied.\\n\\nResidual\
+  \ note: the warning suppression is intentionally limited to incremental live parsing;\
+  \ a stream that actually ends mid-object still logs once on final parse, which is\
+  \ the correct remaining behavior."
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 84
+hook_results: []
+created_at: '2026-04-10T20:47:19+00:00'
