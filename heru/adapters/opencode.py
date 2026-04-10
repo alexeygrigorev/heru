@@ -1,4 +1,9 @@
-"""OpenCode CLI engine adapter."""
+"""Public OpenCode adapter module.
+
+The ``OpenCodeAdapter`` class is part of heru's stable public adapter
+contract under its current exported name. The imported
+``_opencode_impl`` helpers are internal.
+"""
 
 from pathlib import Path
 
@@ -18,6 +23,8 @@ _extract_opencode_transcript = extract_opencode_transcript
 
 
 class OpenCodeAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking OpenCode and parsing its stream."""
+
     DEFAULT_NAME = "opencode"
     DEFAULT_BINARY = "opencode"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(

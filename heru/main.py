@@ -1,4 +1,9 @@
-"""Standalone heru CLI entrypoint."""
+"""Public CLI entrypoint for heru.
+
+This module owns the stable ``heru <engine> <prompt>`` command shape and
+the legacy ``--engine`` compatibility path documented in the README API
+Contract section.
+"""
 
 from __future__ import annotations
 
@@ -140,6 +145,7 @@ def _run_legacy_cli(argv: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Public CLI entrypoint preserving heru's supported argv contract."""
     effective_argv = list(sys.argv[1:] if argv is None else argv)
     try:
         if _is_legacy_invocation(effective_argv):

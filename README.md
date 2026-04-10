@@ -99,6 +99,80 @@ heru/
 tests/         unit tests for adapters, quota parsing, inactivity timeout
 ```
 
+## API Contract
+
+The names below are heru's stable public contract. Changes to their
+signature, return shape, required fields, or documented behavior are
+breaking changes and require a semver-major release.
+
+### Public entrypoints
+
+- `heru.get_engine(name)`: resolves a stable engine name such as `codex` or `claude` to the adapter instance heru will execute.
+- `heru.ENGINE_CHOICES`: lists the stable engine names accepted by the CLI and `get_engine`.
+- `heru.main.main(argv=None)`: provides the public `heru` CLI entrypoint and preserves the supported argument contract.
+
+### Base adapter contract
+
+- `heru.base.ExternalCLIAdapter`: base class callers may subclass against; heru preserves its constructor shape and override points as the adapter contract.
+- `heru.base.CLIInvocation`: immutable invocation description containing argv, cwd, env, and optional stdin payload for a launch.
+- `heru.base.CLIExecutionResult`: immutable execution record containing exit status, stdout/stderr, pid, and transcript accessors for a finished run.
+
+### Engine adapters
+
+- `heru.adapters.codex.CodexCLIAdapter`: stable adapter for Codex CLI command building, transcript rendering, usage extraction, and continuation discovery.
+- `heru.adapters.claude.ClaudeCLIAdapter`: stable adapter for Claude Code invocation and unified stream parsing.
+- `heru.adapters.copilot.CopilotCLIAdapter`: stable adapter for GitHub Copilot CLI invocation and stream parsing.
+- `heru.adapters.gemini.GeminiCLIAdapter`: stable adapter for Gemini CLI invocation, usage extraction, and continuation parsing.
+- `heru.adapters.opencode.OpenCodeAdapter`: stable adapter for OpenCode CLI invocation and stream parsing under the current exported class name.
+- `heru.adapters.goz.GozCLIAdapter`: stable adapter for Goz CLI invocation, transcript extraction, and continuation parsing.
+
+### `heru.types` models
+
+- `EngineUsageWindow`: normalized usage-window counters and reset metadata extracted from provider output.
+- `EngineUsageObservation`: normalized per-run usage or quota observation reported by adapters and quota helpers.
+- `UnifiedEvent`: stable JSONL event schema emitted across engines.
+- `LiveEvent`: a `UnifiedEvent` instance used inside live timelines.
+- `LiveTimeline`: ordered live-event container with summary counts and task/subagent metadata.
+- `ResourceLimitEvent`: normalized process-resource failure details attached to stage reports.
+- `RuntimeEngineContinuation`: stable continuation/session handle for resume flows across engines.
+- `SubagentRef`: stable reference to a spawned subagent as reported in pipeline payloads.
+- `StageResultTests`: stable count payload for tests added and passing in a structured stage result.
+- `TaskUpdateSubmission`: stable schema for structured task updates submitted during grooming.
+- `StageResultSubmission`: stable schema for structured stage verdict payloads submitted by agents.
+- `StageReport`: stable persisted stage-report record exchanged with litehive today.
+
+### Internal modules
+
+The modules below are internal implementation details and may change
+without notice in any release:
+
+- `heru._engine_detection`
+- `heru._continuation`
+- `heru.adapters._codex_impl`
+- `heru.adapters._claude_impl`
+- `heru.adapters._copilot_impl`
+- `heru.adapters._gemini_impl`
+- `heru.adapters._opencode_impl`
+- `heru.adapters._goz_impl`
+
+The same rule applies to private helpers and any `_`-prefixed name in a
+public module unless this README explicitly lists it as part of the
+stable contract.
+
+### Stability Matrix
+
+| heru version | Public API breakage |
+| --- | --- |
+| `v0.1.0` | Initial extracted public contract. No documented breaking public API changes yet. |
+
+### Submitting A Breaking Change
+
+If you need to break any public API listed above:
+
+1. Bump heru's semver major version in `pyproject.toml`.
+2. Add a CHANGELOG entry that names the broken public API and the replacement.
+3. Add a migration note for litehive and any other known consumer that relies on the changed contract.
+
 ## Caveat — stage reports
 
 `heru/types.py` currently defines `StageReport`, `StageResultSubmission`,

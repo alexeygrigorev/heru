@@ -1,4 +1,8 @@
-"""Goz CLI engine adapter."""
+"""Public Goz adapter module.
+
+The ``GozCLIAdapter`` class is part of heru's stable public adapter
+contract. The imported ``_goz_impl`` helpers are internal.
+"""
 
 from pathlib import Path
 
@@ -19,6 +23,8 @@ _goz_extract_text = goz_extract_text
 
 
 class GozCLIAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking Goz and normalizing its output."""
+
     DEFAULT_NAME = "goz"
     DEFAULT_BINARY = "goz"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(

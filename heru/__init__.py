@@ -1,4 +1,9 @@
-"""Reusable engine adapter layer extracted from Litehive."""
+"""Public package entrypoints for heru's stable adapter contract.
+
+Callers may rely on the names re-exported here as the supported public
+surface for engine lookup, adapter classes, execution records, and the
+unified event models documented in the README API Contract section.
+"""
 
 from heru.adapters import (
     ClaudeCLIAdapter,
@@ -56,6 +61,7 @@ ENGINE_CHOICES = sorted(ENGINE_REGISTRY.keys())
 
 
 def get_engine(name: str) -> ExternalCLIAdapter:
+    """Public engine lookup that resolves a stable engine name to its adapter."""
     try:
         return ENGINE_REGISTRY[name]
     except KeyError as exc:

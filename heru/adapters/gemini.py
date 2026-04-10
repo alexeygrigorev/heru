@@ -1,4 +1,8 @@
-"""Gemini CLI engine adapter."""
+"""Public Gemini adapter module.
+
+The ``GeminiCLIAdapter`` class is part of heru's stable public adapter
+contract. The imported ``_gemini_impl`` helpers are internal.
+"""
 
 from pathlib import Path
 
@@ -20,6 +24,8 @@ from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 class GeminiCLIAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking Gemini CLI and parsing JSONL."""
+
     DEFAULT_NAME = "gemini"
     DEFAULT_BINARY = "gemini"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(

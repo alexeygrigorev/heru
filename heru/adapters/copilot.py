@@ -1,4 +1,8 @@
-"""Copilot CLI engine adapter."""
+"""Public Copilot adapter module.
+
+The ``CopilotCLIAdapter`` class is part of heru's stable public adapter
+contract. The imported ``_copilot_impl`` helpers are internal.
+"""
 
 from pathlib import Path
 
@@ -18,6 +22,8 @@ from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 class CopilotCLIAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking GitHub Copilot CLI."""
+
     DEFAULT_NAME = "copilot"
     DEFAULT_BINARY = "copilot"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(
