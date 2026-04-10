@@ -113,7 +113,12 @@ def opencode_continuation(payload: dict[str, object]) -> RuntimeEngineContinuati
 
 
 def opencode_stream_event_adapter() -> StreamEventAdapter:
-    return StreamEventAdapter(live_events=live_events)
+    return StreamEventAdapter(live_events=live_events, continuation_id=opencode_continuation_id)
+
+
+def opencode_continuation_id(payload: dict[str, object]) -> str | None:
+    continuation = opencode_continuation(payload)
+    return continuation.resume_id if continuation is not None else None
 
 
 def live_events(payload: dict[str, object]) -> list[LiveEvent]:

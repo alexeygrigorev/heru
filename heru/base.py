@@ -24,6 +24,7 @@ from heru.types import (
     StageReport,
     StageResultSubmission,
     SubagentStatus,
+    UnifiedEvent,
     cap_feedback,
     utcnow,
 )
@@ -121,6 +122,7 @@ class StreamEventAdapter:
     final_messages: Callable[[dict[str, object]], list[str]] | None = None
     errors: Callable[[dict[str, object]], list[str]] | None = None
     live_events: Callable[[dict[str, object]], list[LiveEvent]] | None = None
+    continuation_id: Callable[[dict[str, object]], str | None] | None = None
 
     def unwrap(self, payload: dict[str, object]) -> dict[str, object]:
         if self.unwrap_event is None:
@@ -146,6 +148,11 @@ class StreamEventAdapter:
         if self.live_events is None:
             return []
         return self.live_events(payload)
+
+    def extract_continuation_id(self, payload: dict[str, object]) -> str | None:
+        if self.continuation_id is None:
+            return None
+        return self.continuation_id(payload)
 
 
 class ExternalCLIAdapter:
@@ -238,6 +245,7 @@ class ExternalCLIAdapter:
         resume_session_id: str | None = None,
         on_started: Callable[[int], None] | None = None,
         extra_env: dict[str, str] | None = None,
+        emit_unified: bool = False,
     ) -> CLIExecutionResult:
         invocation = self.finalize_invocation(
             self.build_invocation(prompt, cwd, model=model, max_turns=max_turns,
@@ -256,6 +264,8 @@ class ExternalCLIAdapter:
         if on_started is not None:
             on_started(proc.pid)
         stdout, stderr = proc.communicate(input=invocation.stdin_data)
+        if emit_unified:
+            stdout = self.render_unified_output(stdout)
         return CLIExecutionResult(
             adapter=self.name,
             argv=invocation.argv,
@@ -280,6 +290,7 @@ class ExternalCLIAdapter:
         on_update: Callable[[CLIExecutionResult], None] | None = None,
         inactivity_timeout_seconds: float = 0,
         extra_env: dict[str, str] | None = None,
+        emit_unified: bool = False,
     ) -> CLIExecutionResult:
         invocation = self.finalize_invocation(
             self.build_invocation(prompt, cwd, model=model, max_turns=max_turns,
@@ -326,13 +337,16 @@ class ExternalCLIAdapter:
         def emit_update() -> None:
             if on_update is None:
                 return
+            stdout = stdout_chunks.decode("utf-8", errors="replace")
+            if emit_unified:
+                stdout = self.render_unified_output(stdout)
             on_update(
                 CLIExecutionResult(
                     adapter=self.name,
                     argv=invocation.argv,
                     cwd=invocation.cwd,
                     exit_code=proc.poll() or 0,
-                    stdout=stdout_chunks.decode("utf-8", errors="replace"),
+                    stdout=stdout,
                     stderr=stderr_chunks.decode("utf-8", errors="replace"),
                     pid=proc.pid,
                     sandboxed=sandboxed,
@@ -386,12 +400,15 @@ class ExternalCLIAdapter:
                     key.fileobj.close()
 
             exit_code = proc.wait()
+            stdout = stdout_chunks.decode("utf-8", errors="replace")
+            if emit_unified:
+                stdout = self.render_unified_output(stdout)
             result = CLIExecutionResult(
                 adapter=self.name,
                 argv=invocation.argv,
                 cwd=invocation.cwd,
                 exit_code=exit_code,
-                stdout=stdout_chunks.decode("utf-8", errors="replace"),
+                stdout=stdout,
                 stderr=stderr_chunks.decode("utf-8", errors="replace"),
                 pid=proc.pid,
                 sandboxed=sandboxed,
@@ -502,6 +519,80 @@ class ExternalCLIAdapter:
 
     def stream_event_adapter(self) -> StreamEventAdapter | None:
         return None
+
+    def iter_native_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return iter_jsonl_payloads(stdout)
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        events = self.translate_native_events(native_payload)
+        return events[0] if events else None
+
+    def translate_native_events(
+        self,
+        native_payload: dict[str, object],
+    ) -> list[UnifiedEvent]:
+        adapter = self.stream_event_adapter()
+        payload = adapter.unwrap(native_payload) if adapter is not None else native_payload
+        raw = native_payload if isinstance(native_payload, dict) else {}
+        unified_events: list[UnifiedEvent] = []
+        if adapter is not None:
+            for event in adapter.extract_live_events(payload):
+                unified_events.append(self._live_event_to_unified_event(event, raw=raw))
+            continuation_id = adapter.extract_continuation_id(payload)
+            if continuation_id:
+                unified_events.append(
+                    UnifiedEvent(
+                        kind="continuation",
+                        engine=self.name,
+                        continuation_id=continuation_id,
+                        raw=raw,
+                    )
+                )
+        return unified_events
+
+    def render_unified_output(self, stdout: str) -> str:
+        unified_lines: list[str] = []
+        sequence = 0
+        for payload in self.iter_native_payloads(stdout):
+            for event in self.translate_native_events(payload):
+                event.sequence = sequence
+                if not event.engine:
+                    event.engine = self.name
+                unified_lines.append(
+                    event.model_dump_json(exclude_none=True)
+                )
+                sequence += 1
+        return ("\n".join(unified_lines) + "\n") if unified_lines else ""
+
+    def _live_event_to_unified_event(
+        self,
+        event: LiveEvent,
+        *,
+        raw: dict[str, object],
+    ) -> UnifiedEvent:
+        usage_delta = event.usage_delta or (event.metadata if event.kind == "usage" else {})
+        continuation_id = event.continuation_id
+        if not continuation_id and event.kind == "continuation":
+            continuation_id = event.content or None
+        return UnifiedEvent(
+            kind=event.kind,
+            engine=event.engine or self.name,
+            sequence=event.sequence,
+            timestamp=event.timestamp or utcnow(),
+            role=event.role,
+            content=event.content,
+            tool_name=event.tool_name,
+            tool_input=event.tool_input,
+            tool_output=event.tool_output,
+            error=event.error,
+            usage_delta=usage_delta,
+            continuation_id=continuation_id,
+            raw=raw,
+            metadata=event.metadata,
+        )
 
     def extract_continuation(
         self,
@@ -816,6 +907,9 @@ def extract_live_timeline(
                         tool_input=event.tool_input,
                         tool_output=event.tool_output,
                         error=event.error,
+                        usage_delta=event.usage_delta,
+                        continuation_id=event.continuation_id,
+                        raw=event.raw,
                         metadata=event.metadata,
                     )
                 )

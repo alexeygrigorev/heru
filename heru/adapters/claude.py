@@ -20,7 +20,7 @@ from heru.base import (
     extract_stream_transcript,
     iter_jsonl_payloads,
 )
-from heru.types import RuntimeEngineContinuation
+from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 _extract_claude_text_delta_fallback = extract_claude_text_delta_fallback
 
@@ -140,6 +140,12 @@ class ClaudeCLIAdapter(ExternalCLIAdapter):
 
     def stream_event_adapter(self):
         return claude_stream_event_adapter()
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        return super().translate_native_event(native_payload)
 
     def extract_continuation(
         self,

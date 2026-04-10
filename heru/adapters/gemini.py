@@ -16,7 +16,7 @@ from heru.base import (
     extract_jsonl_messages,
     iter_jsonl_payloads,
 )
-from heru.types import RuntimeEngineContinuation
+from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 class GeminiCLIAdapter(ExternalCLIAdapter):
@@ -93,6 +93,12 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
 
     def stream_event_adapter(self):
         return gemini_stream_event_adapter()
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        return super().translate_native_event(native_payload)
 
     def extract_continuation(
         self,

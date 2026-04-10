@@ -13,6 +13,7 @@ from heru.base import (
     extract_stream_transcript,
     iter_jsonl_payloads,
 )
+from heru.types import UnifiedEvent
 
 
 class CopilotCLIAdapter(ExternalCLIAdapter):
@@ -89,3 +90,9 @@ class CopilotCLIAdapter(ExternalCLIAdapter):
 
     def stream_event_adapter(self):
         return copilot_stream_event_adapter()
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        return super().translate_native_event(native_payload)

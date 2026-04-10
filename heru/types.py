@@ -37,6 +37,7 @@ LiveEventKind = Literal[
     "error",
     "usage",
     "status",
+    "continuation",
 ]
 LiveEventRole = Literal["assistant", "user", "system"]
 
@@ -121,7 +122,7 @@ class EngineUsageObservation(BaseModel):
     metadata: dict[str, str | int | bool | None] = Field(default_factory=dict)
 
 
-class LiveEvent(BaseModel):
+class UnifiedEvent(BaseModel):
     kind: LiveEventKind
     engine: str
     sequence: int = 0
@@ -132,7 +133,14 @@ class LiveEvent(BaseModel):
     tool_input: str | None = None
     tool_output: str | None = None
     error: str | None = None
+    usage_delta: dict[str, str | int | bool | None] = Field(default_factory=dict)
+    continuation_id: str | None = None
+    raw: dict[str, object] = Field(default_factory=dict)
     metadata: dict[str, str | int | bool | None] = Field(default_factory=dict)
+
+
+class LiveEvent(UnifiedEvent):
+    pass
 
 
 class LiveTimeline(BaseModel):
@@ -314,6 +322,7 @@ __all__ = [
     "TaskComplexity",
     "TaskMode",
     "TaskUpdateSubmission",
+    "UnifiedEvent",
     "cap_feedback",
     "utcnow",
 ]

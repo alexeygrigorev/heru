@@ -24,6 +24,7 @@ def test_heru_cli_runs_selected_engine(monkeypatch, capsys, tmp_path: Path) -> N
         *,
         max_turns: int | None = None,
         resume_session_id: str | None = None,
+        emit_unified: bool = False,
     ):
         calls.update(
             prompt=prompt,
@@ -31,6 +32,7 @@ def test_heru_cli_runs_selected_engine(monkeypatch, capsys, tmp_path: Path) -> N
             model=model,
             max_turns=max_turns,
             resume_session_id=resume_session_id,
+            emit_unified=emit_unified,
         )
         return CLIExecutionResult(
             adapter="claude",
@@ -67,4 +69,37 @@ def test_heru_cli_runs_selected_engine(monkeypatch, capsys, tmp_path: Path) -> N
         "model": "claude-sonnet-4-20250514",
         "max_turns": 3,
         "resume_session_id": "session-123",
+        "emit_unified": True,
     }
+
+
+def test_heru_cli_raw_flag_disables_unified_output(monkeypatch, capsys, tmp_path: Path) -> None:
+    engine = get_engine("claude")
+    calls: dict[str, object] = {}
+
+    def fake_run(
+        prompt: str,
+        cwd: Path,
+        model: str | None = None,
+        *,
+        max_turns: int | None = None,
+        resume_session_id: str | None = None,
+        emit_unified: bool = False,
+    ):
+        calls["emit_unified"] = emit_unified
+        return CLIExecutionResult(
+            adapter="claude",
+            argv=("claude", "-p", prompt),
+            cwd=cwd,
+            exit_code=0,
+            stdout='{"native":true}\n',
+            stderr="",
+        )
+
+    monkeypatch.setattr(engine, "run", fake_run)
+
+    exit_code = main(["ship it", "--engine", "claude", "--cwd", str(tmp_path), "--raw"])
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == '{"native":true}\n'
+    assert calls == {"emit_unified": False}

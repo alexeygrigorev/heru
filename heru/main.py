@@ -15,6 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cwd", type=Path, default=Path.cwd())
     parser.add_argument("--max-turns", type=int)
     parser.add_argument("--resume-session-id")
+    parser.add_argument("--raw", action="store_true")
     return parser
 
 
@@ -27,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
         model=args.model,
         max_turns=args.max_turns,
         resume_session_id=args.resume_session_id,
+        emit_unified=not args.raw,
     )
     if execution.stdout:
         sys.stdout.write(execution.stdout)
