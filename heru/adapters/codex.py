@@ -1,4 +1,9 @@
-"""Codex CLI engine adapter."""
+"""Public Codex adapter module.
+
+The ``CodexCLIAdapter`` class defined here is part of heru's stable
+public adapter contract. The imported ``_codex_impl`` helpers are
+internal implementation details.
+"""
 
 import logging
 from pathlib import Path
@@ -49,6 +54,8 @@ def _extract_codex_transcript(stdout: str) -> str:
 
 
 class CodexCLIAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking Codex and normalizing its output."""
+
     DEFAULT_NAME = "codex"
     DEFAULT_BINARY = "codex"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(

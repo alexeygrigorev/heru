@@ -1,4 +1,9 @@
-"""Shared adapter contract for fire-and-forget external CLIs."""
+"""Public base adapter primitives for heru.
+
+This module defines the stable base contract that external callers and
+adapter subclasses may program against: adapter capabilities, immutable
+invocation and execution records, and the ``ExternalCLIAdapter`` class.
+"""
 
 from collections import OrderedDict
 from dataclasses import dataclass, replace
@@ -76,6 +81,8 @@ def build_invocation_env(
 
 @dataclass(frozen=True, slots=True)
 class AdapterCapabilities:
+    """Capability flags advertised by an adapter instance."""
+
     available: bool = False
     supports_model_override: bool = False
     strips_environment: bool = False
@@ -84,6 +91,8 @@ class AdapterCapabilities:
 
 @dataclass(frozen=True, slots=True)
 class CLIInvocation:
+    """Public immutable launch description passed into an external CLI run."""
+
     argv: tuple[str, ...]
     cwd: Path
     env: dict[str, str]
@@ -92,6 +101,8 @@ class CLIInvocation:
 
 @dataclass(frozen=True, slots=True)
 class CLIExecutionResult:
+    """Public immutable record for a finished external CLI execution."""
+
     adapter: str
     argv: tuple[str, ...]
     cwd: Path
@@ -157,7 +168,12 @@ class StreamEventAdapter:
 
 
 class ExternalCLIAdapter:
-    """Shared contract for one-shot external CLI adapters."""
+    """Public base class for stable heru engine adapters.
+
+    Subclasses may override command-building, transcript parsing, usage
+    extraction, and continuation hooks while callers rely on the shared
+    run/build contract remaining stable across releases.
+    """
 
     LIVE_UPDATE_INTERVAL_SECONDS = 0.5
     DEFAULT_NAME: str | None = None

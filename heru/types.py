@@ -1,8 +1,8 @@
-"""Shared types for the heru engine adapter layer.
+"""Public shared types for the heru engine adapter layer.
 
-This module is the authoritative source for the types used by adapters.
-It has zero imports from litehive — litehive.models imports these names
-from heru, not the reverse.
+This module is the stable public source for heru's pydantic models.
+Callers may rely on these model names, documented fields, and serialized
+shapes as part of heru's versioned API contract.
 
 NOTE: StageReport, StageResultSubmission, StageResultTests, and
 TaskUpdateSubmission live here temporarily. They are really a litehive
@@ -103,6 +103,8 @@ def cap_feedback(text: str, *, limit: int = FEEDBACK_CAP) -> str:
 
 
 class EngineUsageWindow(BaseModel):
+    """Public normalized usage-window counters extracted from provider output."""
+
     used: int | None = None
     limit: int | None = None
     remaining: int | None = None
@@ -111,6 +113,8 @@ class EngineUsageWindow(BaseModel):
 
 
 class EngineUsageObservation(BaseModel):
+    """Public normalized usage or quota observation for one engine run."""
+
     source: EngineMonitoringSource = "local"
     provider: str | None = None
     observed_at: str = Field(default_factory=utcnow)
@@ -123,6 +127,8 @@ class EngineUsageObservation(BaseModel):
 
 
 class UnifiedEvent(BaseModel):
+    """Public cross-engine JSONL event envelope emitted by heru."""
+
     kind: LiveEventKind
     engine: str
     sequence: int = 0
@@ -140,10 +146,12 @@ class UnifiedEvent(BaseModel):
 
 
 class LiveEvent(UnifiedEvent):
-    pass
+    """Public live-event record stored inside a ``LiveTimeline``."""
 
 
 class LiveTimeline(BaseModel):
+    """Public ordered collection of live events plus summary metadata."""
+
     events: list[LiveEvent] = Field(default_factory=list)
     engine: str = ""
     task_id: str | None = None
@@ -165,6 +173,8 @@ class LiveTimeline(BaseModel):
 
 
 class ResourceLimitEvent(BaseModel):
+    """Public normalized resource-limit failure details."""
+
     resource: Literal["memory", "cpu", "processes", "resource"] = "resource"
     reason: str
     observed_signal: str | None = None
@@ -175,6 +185,8 @@ class ResourceLimitEvent(BaseModel):
 
 
 class RuntimeEngineContinuation(BaseModel):
+    """Public continuation handle used to resume a prior engine session."""
+
     session_id: str | None = None
     thread_id: str | None = None
     metadata: dict[str, str | int | bool | None] = Field(default_factory=dict)
@@ -187,6 +199,8 @@ class RuntimeEngineContinuation(BaseModel):
 
 
 class SubagentRef(BaseModel):
+    """Public reference to a subagent reported through pipeline payloads."""
+
     id: str
     role: str
     engine: str
@@ -207,12 +221,17 @@ class SubagentRef(BaseModel):
 
 
 class StageResultTests(BaseModel):
+    """Public structured counts for tests added and passing in a stage result."""
+
     added: int = 0
     passing: int = 0
 
 
 class TaskUpdateSubmission(BaseModel):
     """Structured task updates submitted by agents during grooming.
+
+    This model is currently public because litehive consumes it through
+    heru today, even though it is expected to move out of heru later.
 
     ``outcome``/``priority``/``task_type`` are typed as ``str | None`` because
     heru only passes these fields through to litehive; the concrete allowed
@@ -242,7 +261,7 @@ class TaskUpdateSubmission(BaseModel):
 
 
 class StageResultSubmission(BaseModel):
-    """Schema-validated structured stage result submitted by agents."""
+    """Public schema for structured stage result submissions."""
 
     model_config = {"extra": "forbid"}
 
@@ -268,6 +287,8 @@ class StageResultSubmission(BaseModel):
 
 
 class StageReport(BaseModel):
+    """Public persisted stage-report record exchanged with litehive today."""
+
     task_id: str
     step: Literal["grooming", "implementing", "testing", "accepting", "commit_to_git"]
     verdict: Literal["pass", "accept", "fail", "reject", "blocked"]

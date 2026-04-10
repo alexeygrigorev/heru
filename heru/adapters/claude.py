@@ -1,4 +1,8 @@
-"""Claude CLI engine adapter."""
+"""Public Claude adapter module.
+
+The ``ClaudeCLIAdapter`` class is part of heru's stable public adapter
+contract. The imported ``_claude_impl`` helpers are internal.
+"""
 
 from pathlib import Path
 
@@ -26,6 +30,8 @@ _extract_claude_text_delta_fallback = extract_claude_text_delta_fallback
 
 
 class ClaudeCLIAdapter(ExternalCLIAdapter):
+    """Public stable adapter for invoking Claude Code and parsing its stream."""
+
     DEFAULT_MODEL = "claude-sonnet-4-20250514"
     DEFAULT_NAME = "claude"
     DEFAULT_BINARY = "claude"
