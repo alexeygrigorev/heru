@@ -99,6 +99,10 @@ heru/
 tests/         unit tests for adapters, quota parsing, inactivity timeout
 ```
 
+`tests/contract/` is the standalone public-API contract suite. Treat it as the
+"thou shalt not break" directory: changing assertions in that folder is a
+semver-major change and requires the full breaking-change checklist below.
+
 ## API Contract
 
 The names below are heru's stable public contract. Changes to their
@@ -186,6 +190,17 @@ heru into litehive. Tracking in the litehive task backlog.
 ```bash
 uv run pytest
 ```
+
+`tests/contract/` is included in the default `uv run pytest` discovery. Those
+tests are fixture-only and are intended to pass in a fresh heru-only virtualenv
+without litehive, engine CLIs, or network access.
+
+If a PR changes any assertion under `tests/contract/`, that PR is changing the
+documented public contract and must also:
+
+1. Bump heru's major version in `pyproject.toml`.
+2. Add a `CHANGELOG` entry for the break.
+3. Add a migration note describing what downstream users, including litehive, must change.
 
 ## Development
 
