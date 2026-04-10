@@ -1,0 +1,61 @@
+task_id: T-0005
+step: testing
+verdict: pass
+source: agent
+summary: 'Verified the pre-commit hook workflow end-to-end. I inspected scripts/pre-commit.sh
+  and confirmed staged-path detection now includes deletions via --diff-filter=ACMRD,
+  only triggers for staged paths under heru/ or tests/, discovers litehive via sibling
+  ../litehive before LITEHIVE_REPO, warns and skips when litehive is unavailable,
+  and rejects the commit on smoke-test failure with clear diagnostics. I inspected
+  scripts/install-hooks.sh and confirmed it installs the versioned hook by symlinking
+  scripts/pre-commit.sh into the real hook path from git rev-parse --git-path hooks/pre-commit,
+  which is the right behavior for normal repos and worktrees. I inspected README.md
+  and confirmed the new Development section documents hook installation, the enforced
+  litehive smoke suite, sibling/env-var discovery, the editable-install contract with
+  litehive, and intentional bypass via git commit --no-verify. Verification run in
+  heru: uv run pytest -q tests/test_pre_commit_hook.py -> 6 passed in 0.32s. That
+  suite includes the regression for staged deletions and covers staged-state execution,
+  sibling discovery, LITEHIVE_REPO fallback, warning-skip behavior, failure rejection,
+  and worktree hook installation. Required litehive contract verification: cd /home/alexey/git/litehive
+  && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py tests/test_observability_and_status.py
+  -> 286 passed, 3 warnings in 24.85s. This evidence satisfies the acceptance criteria.'
+feedback: 'Verified the pre-commit hook workflow end-to-end. I inspected scripts/pre-commit.sh
+  and confirmed staged-path detection now includes deletions via --diff-filter=ACMRD,
+  only triggers for staged paths under heru/ or tests/, discovers litehive via sibling
+  ../litehive before LITEHIVE_REPO, warns and skips when litehive is unavailable,
+  and rejects the commit on smoke-test failure with clear diagnostics. I inspected
+  scripts/install-hooks.sh and confirmed it installs the versioned hook by symlinking
+  scripts/pre-commit.sh into the real hook path from git rev-parse --git-path hooks/pre-commit,
+  which is the right behavior for normal repos and worktrees. I inspected README.md
+  and confirmed the new Development section documents hook installation, the enforced
+  litehive smoke suite, sibling/env-var discovery, the editable-install contract with
+  litehive, and intentional bypass via git commit --no-verify. Verification run in
+  heru: uv run pytest -q tests/test_pre_commit_hook.py -> 6 passed in 0.32s. That
+  suite includes the regression for staged deletions and covers staged-state execution,
+  sibling discovery, LITEHIVE_REPO fallback, warning-skip behavior, failure rejection,
+  and worktree hook installation. Required litehive contract verification: cd /home/alexey/git/litehive
+  && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py tests/test_observability_and_status.py
+  -> 286 passed, 3 warnings in 24.85s. This evidence satisfies the acceptance criteria.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 104
+hook_results: []
+created_at: '2026-04-10T20:13:16+00:00'

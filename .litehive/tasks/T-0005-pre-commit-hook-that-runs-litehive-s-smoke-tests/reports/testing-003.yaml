@@ -1,0 +1,61 @@
+task_id: T-0005
+step: testing
+verdict: reject
+source: agent
+summary: 'EXPECTED behavior: the pre-commit hook should run litehive''s focused smoke
+  suite whenever staged files include anything under heru/ or tests/, including deletions.
+  OBSERVED behavior: scripts/pre-commit.sh filters staged paths with ''git diff --cached
+  --name-only -z --diff-filter=ACMR'' at lines 108-116, so staged deletions are excluded
+  and the hook exits 0 without invoking uv. I reproduced this in a fresh temp repo
+  by committing heru/__init__.py, deleting it with ''git rm heru/__init__.py'', placing
+  a fake ''uv'' on PATH, and running ''bash scripts/pre-commit.sh''; result: exit
+  status 0, fake uv was not invoked, and stderr was empty. Steps to reproduce: 1)
+  create a git repo with scripts/pre-commit.sh plus a tracked file under heru/, 2)
+  commit, 3) run ''git rm heru/__init__.py'', 4) put a fake uv executable first on
+  PATH, 5) run ''bash scripts/pre-commit.sh'', 6) observe that it exits successfully
+  without running uv. Acceptance criteria status: satisfied - versioned hook exists
+  under scripts/pre-commit.sh, installer exists under scripts/install-hooks.sh and
+  works in a worktree, README Development section documents installation/discovery/--no-verify,
+  targeted pytest passes (uv run pytest -q tests/test_pre_commit_hook.py -> 5 passed),
+  and the required litehive smoke suite passes (286 passed, 3 warnings). Not met -
+  the hook does not detect all staged files under heru/ or tests/ because deletions
+  are skipped, so commit-time contract enforcement is incomplete.'
+feedback: 'EXPECTED behavior: the pre-commit hook should run litehive''s focused smoke
+  suite whenever staged files include anything under heru/ or tests/, including deletions.
+  OBSERVED behavior: scripts/pre-commit.sh filters staged paths with ''git diff --cached
+  --name-only -z --diff-filter=ACMR'' at lines 108-116, so staged deletions are excluded
+  and the hook exits 0 without invoking uv. I reproduced this in a fresh temp repo
+  by committing heru/__init__.py, deleting it with ''git rm heru/__init__.py'', placing
+  a fake ''uv'' on PATH, and running ''bash scripts/pre-commit.sh''; result: exit
+  status 0, fake uv was not invoked, and stderr was empty. Steps to reproduce: 1)
+  create a git repo with scripts/pre-commit.sh plus a tracked file under heru/, 2)
+  commit, 3) run ''git rm heru/__init__.py'', 4) put a fake uv executable first on
+  PATH, 5) run ''bash scripts/pre-commit.sh'', 6) observe that it exits successfully
+  without running uv. Acceptance criteria status: satisfied - versioned hook exists
+  under scripts/pre-commit.sh, installer exists under scripts/install-hooks.sh and
+  works in a worktree, README Development section documents installation/discovery/--no-verify,
+  targeted pytest passes (uv run pytest -q tests/test_pre_commit_hook.py -> 5 passed),
+  and the required litehive smoke suite passes (286 passed, 3 warnings). Not met -
+  the hook does not detect all staged files under heru/ or tests/ because deletions
+  are skipped, so commit-time contract enforcement is incomplete.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 1
+retry_limit: 3
+retry_source: global
+retry_decision: retry
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 95
+hook_results: []
+created_at: '2026-04-10T20:09:27+00:00'

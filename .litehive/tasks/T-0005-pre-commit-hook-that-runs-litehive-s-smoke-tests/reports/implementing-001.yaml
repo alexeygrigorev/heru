@@ -1,0 +1,58 @@
+task_id: T-0005
+step: implementing
+verdict: pass
+source: agent
+summary: 'Root cause: scripts/pre-commit.sh only considered staged paths from git
+  diff --cached --name-only -z --diff-filter=ACMR, so staged deletions under heru/
+  or tests/ never triggered the litehive smoke suite and commits could bypass contract
+  enforcement. Fix made: updated the hook to include deletions by changing the staged-path
+  filter to ACMRD, and added a focused regression test that stages git rm heru/__init__.py
+  and verifies the hook still invokes uv against the litehive smoke suite. Verification:
+  uv run pytest -q tests/test_pre_commit_hook.py -> 6 passed, including the new staged-deletion
+  case; cd /home/alexey/git/litehive && uv run pytest -q tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  tests/test_observability_and_status.py -> 286 passed, 3 warnings. Evidence now matches
+  the acceptance criteria: versioned hook and installer remain in place, README documentation
+  was already present from the prior attempt, staged changes under heru/ or tests/
+  including deletions now trigger the contract suite, litehive path discovery behavior
+  is unchanged, and failing smoke tests still reject the commit with clear diagnostics.
+  The implementing stage should be retried from this updated state.'
+feedback: 'Root cause: scripts/pre-commit.sh only considered staged paths from git
+  diff --cached --name-only -z --diff-filter=ACMR, so staged deletions under heru/
+  or tests/ never triggered the litehive smoke suite and commits could bypass contract
+  enforcement. Fix made: updated the hook to include deletions by changing the staged-path
+  filter to ACMRD, and added a focused regression test that stages git rm heru/__init__.py
+  and verifies the hook still invokes uv against the litehive smoke suite. Verification:
+  uv run pytest -q tests/test_pre_commit_hook.py -> 6 passed, including the new staged-deletion
+  case; cd /home/alexey/git/litehive && uv run pytest -q tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  tests/test_observability_and_status.py -> 286 passed, 3 warnings. Evidence now matches
+  the acceptance criteria: versioned hook and installer remain in place, README documentation
+  was already present from the prior attempt, staged changes under heru/ or tests/
+  including deletions now trigger the contract suite, litehive path discovery behavior
+  is unchanged, and failing smoke tests still reject the commit with clear diagnostics.
+  The implementing stage should be retried from this updated state.'
+submitted_via_cli: true
+files_changed:
+- README.md
+- scripts/
+- tests/test_pre_commit_hook.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 121
+hook_results: []
+created_at: '2026-04-10T20:11:32+00:00'

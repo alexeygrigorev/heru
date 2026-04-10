@@ -1,0 +1,61 @@
+task_id: T-0005
+step: accepting
+verdict: pass
+source: agent
+summary: 'Accepted. I verified that scripts/pre-commit.sh is committed and versioned,
+  only triggers on staged paths under heru/ or tests/, includes staged deletions via
+  --diff-filter=ACMRD, discovers litehive via sibling ../litehive first then LITEHIVE_REPO,
+  skips with a warning when litehive is unavailable, and rejects the commit with clear
+  diagnostics when the smoke suite fails. I verified scripts/install-hooks.sh installs
+  the versioned hook by symlinking scripts/pre-commit.sh into the real git hook path
+  from git rev-parse --git-path hooks/pre-commit, which covers normal repos and worktrees.
+  I verified README.md has a Development section documenting hook installation, the
+  enforced litehive contract smoke suite, repo discovery behavior, the editable-install
+  contract with litehive, and intentional bypass with git commit --no-verify. I reran
+  uv run pytest -q tests/test_pre_commit_hook.py in heru and it passed: 6 passed in
+  0.32s. That suite covers staged-state execution, sibling discovery, LITEHIVE_REPO
+  fallback, warning skip behavior, failure rejection, staged deletions, and worktree
+  hook installation. I reran the required litehive contract suite with uv run pytest
+  -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py tests/test_observability_and_status.py in /home/alexey/git/litehive
+  and it passed: 286 passed, 3 warnings in 24.76s. This evidence satisfies the acceptance
+  criteria.'
+feedback: 'Accepted. I verified that scripts/pre-commit.sh is committed and versioned,
+  only triggers on staged paths under heru/ or tests/, includes staged deletions via
+  --diff-filter=ACMRD, discovers litehive via sibling ../litehive first then LITEHIVE_REPO,
+  skips with a warning when litehive is unavailable, and rejects the commit with clear
+  diagnostics when the smoke suite fails. I verified scripts/install-hooks.sh installs
+  the versioned hook by symlinking scripts/pre-commit.sh into the real git hook path
+  from git rev-parse --git-path hooks/pre-commit, which covers normal repos and worktrees.
+  I verified README.md has a Development section documenting hook installation, the
+  enforced litehive contract smoke suite, repo discovery behavior, the editable-install
+  contract with litehive, and intentional bypass with git commit --no-verify. I reran
+  uv run pytest -q tests/test_pre_commit_hook.py in heru and it passed: 6 passed in
+  0.32s. That suite covers staged-state execution, sibling discovery, LITEHIVE_REPO
+  fallback, warning skip behavior, failure rejection, staged deletions, and worktree
+  hook installation. I reran the required litehive contract suite with uv run pytest
+  -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py tests/test_observability_and_status.py in /home/alexey/git/litehive
+  and it passed: 286 passed, 3 warnings in 24.76s. This evidence satisfies the acceptance
+  criteria.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 99
+hook_results: []
+created_at: '2026-04-10T20:14:55+00:00'

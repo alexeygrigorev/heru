@@ -6,15 +6,15 @@ task_type: null
 model: null
 mode: implementation
 pipeline_mode: full
-status: in_progress
+status: done
 flag_reason: null
 flag_count: 0
-pipeline_status: commit_to_git
+pipeline_status: done
 priority: high
 pm_complexity: moderate
 planned_effort: l
 created_at: '2026-04-10T18:49:47+00:00'
-updated_at: '2026-04-10T19:59:49+00:00'
+updated_at: '2026-04-10T19:59:51+00:00'
 goal: 'heru is 4381 lines of code but has only 26 direct unit tests at the time of
   the initial extraction from litehive. Most of heru''s behavior is currently tested
   via litehive integration tests that exercise the full orchestration pipeline and
@@ -75,9 +75,9 @@ subagents:
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0004 expand-direct-test-coverage-for-heru-adapters-and'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
+  commit_sha: 2bf30b14a6fb8634fafce3d73a3d0347ccd4d95c
+  checkpoint_base_sha: 0d4607f3d6efe8175cbca0080794f3602fa89736
+  checkpoint_attempts: 1
   rolled_back_checkpoint_attempt: null
   merge_agent_attempts: 0
   worktree_path: null

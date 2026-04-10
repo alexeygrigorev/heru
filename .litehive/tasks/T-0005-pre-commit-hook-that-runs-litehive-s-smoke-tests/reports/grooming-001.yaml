@@ -1,0 +1,67 @@
+task_id: T-0005
+step: grooming
+verdict: pass
+source: agent
+summary: 'Passed grooming. I verified the repo currently has no existing hook installer
+  or Development section in README, so the implementation scope is still cleanly bounded
+  to this task. I also verified litehive currently contains the intended smoke targets:
+  tests/test_runner_workflow.py, tests/test_engine_variants_and_timeline.py, tests/test_heru_cli.py,
+  tests/test_codex_quota.py, and tests/test_observability_and_status.py. One important
+  implementation detail surfaced during grooming: this task is being executed from
+  a Git worktree, and git rev-parse --git-path hooks/pre-commit resolves to /home/alexey/git/heru/.git/hooks/pre-commit
+  even though the worktree top-level is nested under .litehive/worktrees, so the installer
+  should resolve the real hook path via Git rather than assuming .git/hooks under
+  the current directory. No code changes were made in grooming and no pytest suite
+  was run because this stage is planning-only. Acceptance criteria are clear enough
+  to proceed. Recommended execution plan: 1. Add a versioned scripts/pre-commit.sh
+  that inspects staged paths and no-ops unless staged files touch heru/ or tests/.
+  2. In that hook, discover the heru repo root and then locate litehive by trying
+  the sibling of the canonical heru repo root first, then LITEHIVE_REPO, and warn-skip
+  if neither exists. 3. Run the focused litehive smoke suite with clear failure output
+  and a concise success/skip message. 4. Add scripts/install-hooks.sh or make install-hooks
+  using git rev-parse --git-path hooks/pre-commit to install a symlink safely in normal
+  repos and worktrees. 5. Update README with a Development section covering installation,
+  automatic smoke enforcement, the litehive contract, and intentional bypass with
+  --no-verify. PM sizing remains appropriate at complexity simple, effort s.'
+feedback: 'Passed grooming. I verified the repo currently has no existing hook installer
+  or Development section in README, so the implementation scope is still cleanly bounded
+  to this task. I also verified litehive currently contains the intended smoke targets:
+  tests/test_runner_workflow.py, tests/test_engine_variants_and_timeline.py, tests/test_heru_cli.py,
+  tests/test_codex_quota.py, and tests/test_observability_and_status.py. One important
+  implementation detail surfaced during grooming: this task is being executed from
+  a Git worktree, and git rev-parse --git-path hooks/pre-commit resolves to /home/alexey/git/heru/.git/hooks/pre-commit
+  even though the worktree top-level is nested under .litehive/worktrees, so the installer
+  should resolve the real hook path via Git rather than assuming .git/hooks under
+  the current directory. No code changes were made in grooming and no pytest suite
+  was run because this stage is planning-only. Acceptance criteria are clear enough
+  to proceed. Recommended execution plan: 1. Add a versioned scripts/pre-commit.sh
+  that inspects staged paths and no-ops unless staged files touch heru/ or tests/.
+  2. In that hook, discover the heru repo root and then locate litehive by trying
+  the sibling of the canonical heru repo root first, then LITEHIVE_REPO, and warn-skip
+  if neither exists. 3. Run the focused litehive smoke suite with clear failure output
+  and a concise success/skip message. 4. Add scripts/install-hooks.sh or make install-hooks
+  using git rev-parse --git-path hooks/pre-commit to install a symlink safely in normal
+  repos and worktrees. 5. Update README with a Development section covering installation,
+  automatic smoke enforcement, the litehive contract, and intentional bypass with
+  --no-verify. PM sizing remains appropriate at complexity simple, effort s.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 110
+hook_results: []
+created_at: '2026-04-10T20:01:44+00:00'

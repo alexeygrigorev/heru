@@ -1,0 +1,72 @@
+task_id: T-0005
+step: implementing
+verdict: pass
+source: agent
+summary: 'Implemented a versioned git hook workflow for heru->litehive contract enforcement.
+  Added scripts/pre-commit.sh to detect staged changes under heru/ or tests/, locate
+  litehive via sibling ../litehive or LITEHIVE_REPO, temporarily isolate unstaged
+  worktree/untracked changes so the smoke run sees staged state, and run: uv run pytest
+  -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py tests/test_observability_and_status.py. The hook exits
+  1 with clear diagnostics when the smoke suite fails, exits 0 with a warning when
+  litehive is not available, and remains silent for unrelated staged paths. Added
+  scripts/install-hooks.sh to symlink the versioned hook into the real hook path resolved
+  by git rev-parse --git-path hooks/pre-commit, which works from a normal checkout
+  and from a git worktree. Added focused pytest coverage in tests/test_pre_commit_hook.py
+  covering staged-state execution, sibling discovery, LITEHIVE_REPO fallback, warning
+  skip when litehive is missing, failure rejection, and hook installation into a worktree-backed
+  repo hook dir. Updated README with a Development section documenting installation,
+  the enforced litehive contract smoke suite, automatic repo discovery, and intentional
+  bypass with git commit --no-verify. Verification run: uv run pytest -q tests/test_pre_commit_hook.py
+  tests/test_cli_smoke.py -> 8 passed. Required litehive contract run: cd /home/alexey/git/litehive
+  && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py tests/test_observability_and_status.py
+  -> 286 passed, 3 warnings. Note: the public `litehive report` CLI currently crashes
+  with AttributeError: Namespace has no attribute files_changed, so this report was
+  submitted through litehive.cli.report._cmd_report with files_changed=[].'
+feedback: 'Implemented a versioned git hook workflow for heru->litehive contract enforcement.
+  Added scripts/pre-commit.sh to detect staged changes under heru/ or tests/, locate
+  litehive via sibling ../litehive or LITEHIVE_REPO, temporarily isolate unstaged
+  worktree/untracked changes so the smoke run sees staged state, and run: uv run pytest
+  -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py tests/test_observability_and_status.py. The hook exits
+  1 with clear diagnostics when the smoke suite fails, exits 0 with a warning when
+  litehive is not available, and remains silent for unrelated staged paths. Added
+  scripts/install-hooks.sh to symlink the versioned hook into the real hook path resolved
+  by git rev-parse --git-path hooks/pre-commit, which works from a normal checkout
+  and from a git worktree. Added focused pytest coverage in tests/test_pre_commit_hook.py
+  covering staged-state execution, sibling discovery, LITEHIVE_REPO fallback, warning
+  skip when litehive is missing, failure rejection, and hook installation into a worktree-backed
+  repo hook dir. Updated README with a Development section documenting installation,
+  the enforced litehive contract smoke suite, automatic repo discovery, and intentional
+  bypass with git commit --no-verify. Verification run: uv run pytest -q tests/test_pre_commit_hook.py
+  tests/test_cli_smoke.py -> 8 passed. Required litehive contract run: cd /home/alexey/git/litehive
+  && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py tests/test_observability_and_status.py
+  -> 286 passed, 3 warnings. Note: the public `litehive report` CLI currently crashes
+  with AttributeError: Namespace has no attribute files_changed, so this report was
+  submitted through litehive.cli.report._cmd_report with files_changed=[].'
+submitted_via_cli: true
+files_changed:
+- README.md
+- scripts/
+- tests/test_pre_commit_hook.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 367
+hook_results: []
+created_at: '2026-04-10T20:07:51+00:00'
