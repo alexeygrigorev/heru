@@ -1,0 +1,118 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Verified current repo state without code changes. `uv run pytest --collect-only\
+    \ -q` succeeds and currently collects 80 parametrized tests; the task record baseline\
+    \ of 26 direct tests is stale, but the coverage gap is still real. Coverage today\
+    \ is concentrated in CLI option forwarding, codex quota, 3 inactivity-timeout\
+    \ tests, unified-event translation, and a small goz/resume slice. Direct unit\
+    \ coverage is still missing for most adapter surfaces (`build_invocation`, transcript\
+    \ rendering, usage extraction, continuation extraction, and helper parsing modules),\
+    \ for `base.py` process behavior beyond the existing timeout tests, for `quota/claude_quota.py`,\
+    \ `quota/copilot_quota.py`, `quota/zai_quota.py`, and for true heru-native CLI\
+    \ subprocess smoke tests.\n\nExecution plan for implementing:\n1. Add focused\
+    \ adapter unit suites for `codex`, `claude`, `copilot`, `gemini`, `opencode`,\
+    \ and `goz`, using fixture-driven JSONL payloads and direct helper tests in each\
+    \ `_*.py` impl module. Target at least 10 tests per adapter covering fresh vs\
+    \ resume invocation shapes, transcript rendering fallback paths, usage extraction,\
+    \ continuation extraction, and one or more adapter-specific helper behaviors.\n\
+    2. Add direct `base.py` tests around `ExternalCLIAdapter.run_live` with a tiny\
+    \ fake subprocess script/stub adapter: happy path streaming, stderr-only noise\
+    \ leading to inactivity timeout, graceful terminate/kill handling, continuation\
+    \ extraction integration, environment stripping via `build_invocation_env`, and\
+    \ stream/unified-event helper coverage where assertions would fail on regression.\n\
+    3. Add standalone quota parser/cache tests for `claude_quota`, `copilot_quota`,\
+    \ and `zai_quota`, mirroring the style of existing `test_codex_quota.py` and keeping\
+    \ all fetch/process calls mocked.\n4. Add heru CLI smoke tests that spawn a fake\
+    \ engine binary/script emitting deterministic JSONL so `main.py` is verified end-to-end\
+    \ for stdout/stderr wiring, exit code propagation, resume/continue handling, and\
+    \ raw vs unified output behavior without importing litehive.\n5. Run targeted\
+    \ pytest modules first, then `uv run pytest`, then the required litehive contract\
+    \ smoke suite from `~/git/litehive` before handing off.\n\nAcceptance-criteria\
+    \ interpretation for next stage:\n- Treat the stale 26-test baseline as informational\
+    \ only; the real observable target is `uv run pytest` collecting/passing at least\
+    \ 100 standalone heru tests on this branch.\n- Keep the task scoped to heru-native\
+    \ tests only; no API changes, no litehive imports, no stage-report semantics work.\n\
+    \nTASK_UPDATE:\nplan:\n  - Add adapter and `_impl` unit tests for all six engines\
+    \ with fixture-driven JSONL coverage.\n  - Add direct `base.py` process-behavior\
+    \ tests for live execution, timeout, termination, continuation, and env stripping.\n\
+    \  - Add quota unit tests for Claude, Copilot, and Z.AI helpers.\n  - Add end-to-end\
+    \ heru CLI smoke tests using a fake engine binary.\n  - Verify with targeted pytest,\
+    \ full heru pytest, and required litehive contract smoke tests.\npm_complexity:\
+    \ complex\nplanned_effort: xl"
+  files_changed: []
+  created_at: '2026-04-10T19:45:42+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Added heru-native direct coverage across all six adapters, base.py, quota
+    helpers, and subprocess CLI smoke paths. New suites cover fresh/resume invocation
+    shapes, transcript rendering from fixture JSONL samples, usage extraction, continuation
+    extraction, and adapter-specific helper logic for codex/claude/copilot/gemini/goz/opencode;
+    base.py now has direct tests for run_live happy path, unified streaming, stderr-only
+    inactivity timeout, callback-triggered teardown, environment stripping, and continuation
+    extraction; quota coverage now includes claude/copilot/zai parser and cache/fail-open
+    behavior; CLI smoke tests now spawn fake engine binaries and verify unified/raw
+    wiring plus continue flow. Verification: uv run pytest --collect-only -q now collects
+    165 standalone heru tests, uv run pytest -q passed (165 passed in 4.05s), and
+    required litehive contract smoke passed from ~/git/litehive (197 passed, 3 warnings).
+    Also fixed a real base.py cleanup bug uncovered by the new tests by avoiding fragile
+    communicate() cleanup after aborting live runs.'
+  files_changed: []
+  created_at: '2026-04-10T19:55:51+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Validated the branch against the testing-stage acceptance criteria. Evidence:
+    uv run pytest --collect-only -q in heru collects 165 standalone tests, so the
+    repo exceeds the 100-test target. Targeted verification passed with uv run pytest
+    -q tests/test_base_direct.py tests/test_codex_adapter_direct.py tests/test_claude_adapter_direct.py
+    tests/test_copilot_adapter_direct.py tests/test_gemini_adapter_direct.py tests/test_goz_adapter_direct.py
+    tests/test_opencode_adapter_direct.py tests/test_quota_parsers.py tests/test_cli_smoke.py
+    (85 passed). Full heru suite passed with uv run pytest -q (165 passed in 4.08s).
+    Required litehive contract smoke also passed from /home/alexey/git/litehive with
+    uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q (197 passed, 3 Typer deprecation
+    warnings only). I also checked policy compliance with rg and found no litehive
+    imports under tests. Direct adapter coverage meets the per-adapter minimum: claude
+    11 tests, codex 13, copilot 10, gemini 10, goz 10, opencode 10, covering fresh/resume/continue
+    invocation shapes, transcript rendering from fixture JSONL, usage extraction,
+    continuation extraction, and helper logic in the _impl modules. tests/test_base_direct.py
+    covers ExternalCLIAdapter.run_live happy path, unified stream-event emission,
+    stderr-only inactivity timeout, graceful termination on callback abort, environment
+    stripping, and continuation extraction integration. tests/test_quota_parsers.py
+    covers claude/copilot/zai quota parsing and cache/fail-open behavior. tests/test_cli_smoke.py
+    provides end-to-end smoke coverage with fake engine binaries for unified output,
+    raw output, and continue wiring. Verdict: PASS.'
+  files_changed: []
+  created_at: '2026-04-10T19:57:44+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. I re-verified the task from this worktree rather than relying
+    on prior stage notes. Evidence: uv run pytest --collect-only -q in heru collected
+    165 standalone tests, exceeding the acceptance target of at least 100 direct tests.
+    The collected suite includes direct coverage for every adapter: claude (11 tests),
+    codex (14 direct adapter tests plus existing codex quota tests), copilot (10),
+    gemini (10), goz (10 direct plus existing goz tests), and opencode (10), covering
+    fresh/resume/continue invocation shapes where supported, transcript rendering
+    from fixture JSONL, usage extraction, continuation extraction, and helper behavior
+    in the corresponding _impl modules. tests/test_base_direct.py covers ExternalCLIAdapter.run_live
+    happy-path streaming, unified stream-event emission, stderr-only inactivity timeout,
+    graceful termination when the callback aborts, environment stripping behavior,
+    and continuation extraction integration. tests/test_quota_parsers.py covers claude/copilot/zai
+    quota parsing plus cache/fail-open behavior. tests/test_cli_smoke.py provides
+    end-to-end smoke coverage using fake engine binaries for unified output, raw output,
+    and continue wiring. Verification I ran: uv run pytest -q tests/test_base_direct.py
+    tests/test_codex_adapter_direct.py tests/test_claude_adapter_direct.py tests/test_copilot_adapter_direct.py
+    tests/test_gemini_adapter_direct.py tests/test_goz_adapter_direct.py tests/test_opencode_adapter_direct.py
+    tests/test_quota_parsers.py tests/test_cli_smoke.py -> 85 passed in 1.09s; uv
+    run pytest -q -> 165 passed in 4.00s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q -> 197 passed, 3 Typer deprecation warnings only. Policy check: rg -n ''from
+    litehive|import litehive'' tests returned no matches, so the new heru tests remain
+    standalone. I also confirmed the code change outside tests is limited to a small
+    heru/base.py cleanup, consistent with the new run-live termination coverage. Verdict:
+    PASS.'
+  files_changed: []
+  created_at: '2026-04-10T19:59:42+00:00'

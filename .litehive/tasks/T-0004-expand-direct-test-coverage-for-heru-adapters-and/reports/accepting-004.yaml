@@ -1,0 +1,73 @@
+task_id: T-0004
+step: accepting
+verdict: pass
+source: agent
+summary: 'Accepted. I re-verified the task from this worktree rather than relying
+  on prior stage notes. Evidence: uv run pytest --collect-only -q in heru collected
+  165 standalone tests, exceeding the acceptance target of at least 100 direct tests.
+  The collected suite includes direct coverage for every adapter: claude (11 tests),
+  codex (14 direct adapter tests plus existing codex quota tests), copilot (10), gemini
+  (10), goz (10 direct plus existing goz tests), and opencode (10), covering fresh/resume/continue
+  invocation shapes where supported, transcript rendering from fixture JSONL, usage
+  extraction, continuation extraction, and helper behavior in the corresponding _impl
+  modules. tests/test_base_direct.py covers ExternalCLIAdapter.run_live happy-path
+  streaming, unified stream-event emission, stderr-only inactivity timeout, graceful
+  termination when the callback aborts, environment stripping behavior, and continuation
+  extraction integration. tests/test_quota_parsers.py covers claude/copilot/zai quota
+  parsing plus cache/fail-open behavior. tests/test_cli_smoke.py provides end-to-end
+  smoke coverage using fake engine binaries for unified output, raw output, and continue
+  wiring. Verification I ran: uv run pytest -q tests/test_base_direct.py tests/test_codex_adapter_direct.py
+  tests/test_claude_adapter_direct.py tests/test_copilot_adapter_direct.py tests/test_gemini_adapter_direct.py
+  tests/test_goz_adapter_direct.py tests/test_opencode_adapter_direct.py tests/test_quota_parsers.py
+  tests/test_cli_smoke.py -> 85 passed in 1.09s; uv run pytest -q -> 165 passed in
+  4.00s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, 3 Typer deprecation
+  warnings only. Policy check: rg -n ''from litehive|import litehive'' tests returned
+  no matches, so the new heru tests remain standalone. I also confirmed the code change
+  outside tests is limited to a small heru/base.py cleanup, consistent with the new
+  run-live termination coverage. Verdict: PASS.'
+feedback: 'Accepted. I re-verified the task from this worktree rather than relying
+  on prior stage notes. Evidence: uv run pytest --collect-only -q in heru collected
+  165 standalone tests, exceeding the acceptance target of at least 100 direct tests.
+  The collected suite includes direct coverage for every adapter: claude (11 tests),
+  codex (14 direct adapter tests plus existing codex quota tests), copilot (10), gemini
+  (10), goz (10 direct plus existing goz tests), and opencode (10), covering fresh/resume/continue
+  invocation shapes where supported, transcript rendering from fixture JSONL, usage
+  extraction, continuation extraction, and helper behavior in the corresponding _impl
+  modules. tests/test_base_direct.py covers ExternalCLIAdapter.run_live happy-path
+  streaming, unified stream-event emission, stderr-only inactivity timeout, graceful
+  termination when the callback aborts, environment stripping behavior, and continuation
+  extraction integration. tests/test_quota_parsers.py covers claude/copilot/zai quota
+  parsing plus cache/fail-open behavior. tests/test_cli_smoke.py provides end-to-end
+  smoke coverage using fake engine binaries for unified output, raw output, and continue
+  wiring. Verification I ran: uv run pytest -q tests/test_base_direct.py tests/test_codex_adapter_direct.py
+  tests/test_claude_adapter_direct.py tests/test_copilot_adapter_direct.py tests/test_gemini_adapter_direct.py
+  tests/test_goz_adapter_direct.py tests/test_opencode_adapter_direct.py tests/test_quota_parsers.py
+  tests/test_cli_smoke.py -> 85 passed in 1.09s; uv run pytest -q -> 165 passed in
+  4.00s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, 3 Typer deprecation
+  warnings only. Policy check: rg -n ''from litehive|import litehive'' tests returned
+  no matches, so the new heru tests remain standalone. I also confirmed the code change
+  outside tests is limited to a small heru/base.py cleanup, consistent with the new
+  run-live termination coverage. Verdict: PASS.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 108
+hook_results: []
+created_at: '2026-04-10T19:59:49+00:00'

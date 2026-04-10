@@ -1,0 +1,73 @@
+task_id: T-0004
+step: grooming
+verdict: pass
+source: agent
+summary: Verified current repo state without code changes. `uv run pytest --collect-only
+  -q` succeeds and currently collects 80 parametrized tests; the task record baseline
+  of 26 direct tests is stale, but the coverage gap is still real. Coverage today
+  is concentrated in CLI option forwarding, codex quota, 3 inactivity-timeout tests,
+  unified-event translation, and a small goz/resume slice. Direct unit coverage is
+  still missing for most adapter surfaces (`build_invocation`, transcript rendering,
+  usage extraction, continuation extraction, and helper parsing modules), for `base.py`
+  process behavior beyond the existing timeout tests, for `quota/claude_quota.py`,
+  `quota/copilot_quota.py`, `quota/zai_quota.py`, and for true heru-native CLI subprocess
+  smoke tests.
+feedback: "Verified current repo state without code changes. `uv run pytest --collect-only\
+  \ -q` succeeds and currently collects 80 parametrized tests; the task record baseline\
+  \ of 26 direct tests is stale, but the coverage gap is still real. Coverage today\
+  \ is concentrated in CLI option forwarding, codex quota, 3 inactivity-timeout tests,\
+  \ unified-event translation, and a small goz/resume slice. Direct unit coverage\
+  \ is still missing for most adapter surfaces (`build_invocation`, transcript rendering,\
+  \ usage extraction, continuation extraction, and helper parsing modules), for `base.py`\
+  \ process behavior beyond the existing timeout tests, for `quota/claude_quota.py`,\
+  \ `quota/copilot_quota.py`, `quota/zai_quota.py`, and for true heru-native CLI subprocess\
+  \ smoke tests.\n\nExecution plan for implementing:\n1. Add focused adapter unit\
+  \ suites for `codex`, `claude`, `copilot`, `gemini`, `opencode`, and `goz`, using\
+  \ fixture-driven JSONL payloads and direct helper tests in each `_*.py` impl module.\
+  \ Target at least 10 tests per adapter covering fresh vs resume invocation shapes,\
+  \ transcript rendering fallback paths, usage extraction, continuation extraction,\
+  \ and one or more adapter-specific helper behaviors.\n2. Add direct `base.py` tests\
+  \ around `ExternalCLIAdapter.run_live` with a tiny fake subprocess script/stub adapter:\
+  \ happy path streaming, stderr-only noise leading to inactivity timeout, graceful\
+  \ terminate/kill handling, continuation extraction integration, environment stripping\
+  \ via `build_invocation_env`, and stream/unified-event helper coverage where assertions\
+  \ would fail on regression.\n3. Add standalone quota parser/cache tests for `claude_quota`,\
+  \ `copilot_quota`, and `zai_quota`, mirroring the style of existing `test_codex_quota.py`\
+  \ and keeping all fetch/process calls mocked.\n4. Add heru CLI smoke tests that\
+  \ spawn a fake engine binary/script emitting deterministic JSONL so `main.py` is\
+  \ verified end-to-end for stdout/stderr wiring, exit code propagation, resume/continue\
+  \ handling, and raw vs unified output behavior without importing litehive.\n5. Run\
+  \ targeted pytest modules first, then `uv run pytest`, then the required litehive\
+  \ contract smoke suite from `~/git/litehive` before handing off.\n\nAcceptance-criteria\
+  \ interpretation for next stage:\n- Treat the stale 26-test baseline as informational\
+  \ only; the real observable target is `uv run pytest` collecting/passing at least\
+  \ 100 standalone heru tests on this branch.\n- Keep the task scoped to heru-native\
+  \ tests only; no API changes, no litehive imports, no stage-report semantics work.\n\
+  \nTASK_UPDATE:\nplan:\n  - Add adapter and `_impl` unit tests for all six engines\
+  \ with fixture-driven JSONL coverage.\n  - Add direct `base.py` process-behavior\
+  \ tests for live execution, timeout, termination, continuation, and env stripping.\n\
+  \  - Add quota unit tests for Claude, Copilot, and Z.AI helpers.\n  - Add end-to-end\
+  \ heru CLI smoke tests using a fake engine binary.\n  - Verify with targeted pytest,\
+  \ full heru pytest, and required litehive contract smoke tests.\npm_complexity:\
+  \ complex\nplanned_effort: xl"
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 114
+hook_results: []
+created_at: '2026-04-10T19:45:49+00:00'

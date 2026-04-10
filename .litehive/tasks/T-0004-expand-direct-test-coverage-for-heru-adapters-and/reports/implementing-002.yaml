@@ -1,0 +1,63 @@
+task_id: T-0004
+step: implementing
+verdict: pass
+source: agent
+summary: 'Added heru-native direct coverage across all six adapters, base.py, quota
+  helpers, and subprocess CLI smoke paths. New suites cover fresh/resume invocation
+  shapes, transcript rendering from fixture JSONL samples, usage extraction, continuation
+  extraction, and adapter-specific helper logic for codex/claude/copilot/gemini/goz/opencode;
+  base.py now has direct tests for run_live happy path, unified streaming, stderr-only
+  inactivity timeout, callback-triggered teardown, environment stripping, and continuation
+  extraction; quota coverage now includes claude/copilot/zai parser and cache/fail-open
+  behavior; CLI smoke tests now spawn fake engine binaries and verify unified/raw
+  wiring plus continue flow. Verification: uv run pytest --collect-only -q now collects
+  165 standalone heru tests, uv run pytest -q passed (165 passed in 4.05s), and required
+  litehive contract smoke passed from ~/git/litehive (197 passed, 3 warnings). Also
+  fixed a real base.py cleanup bug uncovered by the new tests by avoiding fragile
+  communicate() cleanup after aborting live runs.'
+feedback: 'Added heru-native direct coverage across all six adapters, base.py, quota
+  helpers, and subprocess CLI smoke paths. New suites cover fresh/resume invocation
+  shapes, transcript rendering from fixture JSONL samples, usage extraction, continuation
+  extraction, and adapter-specific helper logic for codex/claude/copilot/gemini/goz/opencode;
+  base.py now has direct tests for run_live happy path, unified streaming, stderr-only
+  inactivity timeout, callback-triggered teardown, environment stripping, and continuation
+  extraction; quota coverage now includes claude/copilot/zai parser and cache/fail-open
+  behavior; CLI smoke tests now spawn fake engine binaries and verify unified/raw
+  wiring plus continue flow. Verification: uv run pytest --collect-only -q now collects
+  165 standalone heru tests, uv run pytest -q passed (165 passed in 4.05s), and required
+  litehive contract smoke passed from ~/git/litehive (197 passed, 3 warnings). Also
+  fixed a real base.py cleanup bug uncovered by the new tests by avoiding fragile
+  communicate() cleanup after aborting live runs.'
+submitted_via_cli: true
+files_changed:
+- heru/base.py
+- tests/conftest.py
+- tests/fixtures/
+- tests/test_base_direct.py
+- tests/test_claude_adapter_direct.py
+- tests/test_cli_smoke.py
+- tests/test_codex_adapter_direct.py
+- tests/test_copilot_adapter_direct.py
+- tests/test_gemini_adapter_direct.py
+- tests/test_goz_adapter_direct.py
+- tests/test_opencode_adapter_direct.py
+- tests/test_quota_parsers.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 612
+hook_results: []
+created_at: '2026-04-10T19:56:01+00:00'

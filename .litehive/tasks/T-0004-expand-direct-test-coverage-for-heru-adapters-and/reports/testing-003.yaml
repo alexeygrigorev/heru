@@ -1,0 +1,67 @@
+task_id: T-0004
+step: testing
+verdict: pass
+source: agent
+summary: 'Validated the branch against the testing-stage acceptance criteria. Evidence:
+  uv run pytest --collect-only -q in heru collects 165 standalone tests, so the repo
+  exceeds the 100-test target. Targeted verification passed with uv run pytest -q
+  tests/test_base_direct.py tests/test_codex_adapter_direct.py tests/test_claude_adapter_direct.py
+  tests/test_copilot_adapter_direct.py tests/test_gemini_adapter_direct.py tests/test_goz_adapter_direct.py
+  tests/test_opencode_adapter_direct.py tests/test_quota_parsers.py tests/test_cli_smoke.py
+  (85 passed). Full heru suite passed with uv run pytest -q (165 passed in 4.08s).
+  Required litehive contract smoke also passed from /home/alexey/git/litehive with
+  uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q (197 passed, 3 Typer deprecation
+  warnings only). I also checked policy compliance with rg and found no litehive imports
+  under tests. Direct adapter coverage meets the per-adapter minimum: claude 11 tests,
+  codex 13, copilot 10, gemini 10, goz 10, opencode 10, covering fresh/resume/continue
+  invocation shapes, transcript rendering from fixture JSONL, usage extraction, continuation
+  extraction, and helper logic in the _impl modules. tests/test_base_direct.py covers
+  ExternalCLIAdapter.run_live happy path, unified stream-event emission, stderr-only
+  inactivity timeout, graceful termination on callback abort, environment stripping,
+  and continuation extraction integration. tests/test_quota_parsers.py covers claude/copilot/zai
+  quota parsing and cache/fail-open behavior. tests/test_cli_smoke.py provides end-to-end
+  smoke coverage with fake engine binaries for unified output, raw output, and continue
+  wiring. Verdict: PASS.'
+feedback: 'Validated the branch against the testing-stage acceptance criteria. Evidence:
+  uv run pytest --collect-only -q in heru collects 165 standalone tests, so the repo
+  exceeds the 100-test target. Targeted verification passed with uv run pytest -q
+  tests/test_base_direct.py tests/test_codex_adapter_direct.py tests/test_claude_adapter_direct.py
+  tests/test_copilot_adapter_direct.py tests/test_gemini_adapter_direct.py tests/test_goz_adapter_direct.py
+  tests/test_opencode_adapter_direct.py tests/test_quota_parsers.py tests/test_cli_smoke.py
+  (85 passed). Full heru suite passed with uv run pytest -q (165 passed in 4.08s).
+  Required litehive contract smoke also passed from /home/alexey/git/litehive with
+  uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q (197 passed, 3 Typer deprecation
+  warnings only). I also checked policy compliance with rg and found no litehive imports
+  under tests. Direct adapter coverage meets the per-adapter minimum: claude 11 tests,
+  codex 13, copilot 10, gemini 10, goz 10, opencode 10, covering fresh/resume/continue
+  invocation shapes, transcript rendering from fixture JSONL, usage extraction, continuation
+  extraction, and helper logic in the _impl modules. tests/test_base_direct.py covers
+  ExternalCLIAdapter.run_live happy path, unified stream-event emission, stderr-only
+  inactivity timeout, graceful termination on callback abort, environment stripping,
+  and continuation extraction integration. tests/test_quota_parsers.py covers claude/copilot/zai
+  quota parsing and cache/fail-open behavior. tests/test_cli_smoke.py provides end-to-end
+  smoke coverage with fake engine binaries for unified output, raw output, and continue
+  wiring. Verdict: PASS.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 120
+hook_results: []
+created_at: '2026-04-10T19:58:01+00:00'
