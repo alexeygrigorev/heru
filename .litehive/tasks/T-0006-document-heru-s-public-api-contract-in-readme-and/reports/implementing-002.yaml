@@ -1,0 +1,77 @@
+task_id: T-0006
+step: implementing
+verdict: pass
+source: agent
+summary: 'Implemented T-0006 as scoped documentation and docstring work only. Added
+  a new README API Contract section that lists the stable public surface: get_engine,
+  ENGINE_CHOICES, heru.main.main, ExternalCLIAdapter, CLIInvocation, CLIExecutionResult,
+  the six current adapter classes (including the current exported OpenCodeAdapter
+  name), and all public pydantic models in heru.types with one-line guarantees. The
+  same section now explicitly marks heru._engine_detection, heru._continuation, and
+  each heru.adapters._*_impl module as internal/changeable without notice, adds a
+  stability matrix seeded with v0.1.0, and documents the required breaking-change
+  process (semver-major bump, CHANGELOG entry, migration note for litehive/other consumers).
+  Updated module/class/function docstrings in heru/__init__.py, heru/base.py, heru/main.py,
+  heru/types.py, and each public adapter module so the public status and caller-reliable
+  contract are called out inline. Added focused regression coverage in tests/test_api_contract_docs.py
+  that asserts the README contract section contains the required public/internal entries
+  and that the targeted public modules/classes/functions have public-contract docstrings.
+  Verification: uv run pytest -q tests/test_api_contract_docs.py -> 2 passed; uv run
+  pytest -q tests/test_heru_cli.py tests/test_base_direct.py -> 48 passed; required
+  litehive smoke suite from ~/git/litehive (tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q) -> 197 passed, 3 unrelated
+  Typer deprecation warnings. This meets the acceptance criteria without changing
+  the exported API shape.'
+feedback: 'Implemented T-0006 as scoped documentation and docstring work only. Added
+  a new README API Contract section that lists the stable public surface: get_engine,
+  ENGINE_CHOICES, heru.main.main, ExternalCLIAdapter, CLIInvocation, CLIExecutionResult,
+  the six current adapter classes (including the current exported OpenCodeAdapter
+  name), and all public pydantic models in heru.types with one-line guarantees. The
+  same section now explicitly marks heru._engine_detection, heru._continuation, and
+  each heru.adapters._*_impl module as internal/changeable without notice, adds a
+  stability matrix seeded with v0.1.0, and documents the required breaking-change
+  process (semver-major bump, CHANGELOG entry, migration note for litehive/other consumers).
+  Updated module/class/function docstrings in heru/__init__.py, heru/base.py, heru/main.py,
+  heru/types.py, and each public adapter module so the public status and caller-reliable
+  contract are called out inline. Added focused regression coverage in tests/test_api_contract_docs.py
+  that asserts the README contract section contains the required public/internal entries
+  and that the targeted public modules/classes/functions have public-contract docstrings.
+  Verification: uv run pytest -q tests/test_api_contract_docs.py -> 2 passed; uv run
+  pytest -q tests/test_heru_cli.py tests/test_base_direct.py -> 48 passed; required
+  litehive smoke suite from ~/git/litehive (tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q) -> 197 passed, 3 unrelated
+  Typer deprecation warnings. This meets the acceptance criteria without changing
+  the exported API shape.'
+submitted_via_cli: true
+files_changed:
+- README.md
+- heru/__init__.py
+- heru/adapters/claude.py
+- heru/adapters/codex.py
+- heru/adapters/copilot.py
+- heru/adapters/gemini.py
+- heru/adapters/goz.py
+- heru/adapters/opencode.py
+- heru/base.py
+- heru/main.py
+- heru/types.py
+- tests/test_api_contract_docs.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 370
+hook_results: []
+created_at: '2026-04-10T20:23:01+00:00'

@@ -1,0 +1,67 @@
+task_id: T-0006
+step: accepting
+verdict: pass
+source: agent
+summary: 'Validated T-0006 against the acceptance criteria and accepted it. I inspected
+  the scoped diff in README.md, heru/__init__.py, heru/base.py, heru/main.py, heru/types.py,
+  and the six public adapter modules, plus the new tests/test_api_contract_docs.py
+  coverage. README now has an API Contract section that explicitly lists the stable
+  public names called out by the task: heru.get_engine(name), heru.ENGINE_CHOICES,
+  heru.main.main(argv=None), heru.base.ExternalCLIAdapter, heru.base.CLIInvocation,
+  heru.base.CLIExecutionResult, the six current adapter classes (CodexCLIAdapter,
+  ClaudeCLIAdapter, CopilotCLIAdapter, GeminiCLIAdapter, GozCLIAdapter, and the currently
+  exported OpenCodeAdapter), and the public heru.types models with one-line guarantees.
+  The same section explicitly marks heru._engine_detection, heru._continuation, and
+  each heru.adapters._*_impl module as internal/changeable without notice, adds a
+  stability matrix seeded with v0.1.0, and documents the breaking-change process requiring
+  a semver-major bump, CHANGELOG entry, and migration note for litehive/other consumers.
+  I also verified the public-status docstrings were added to the targeted public modules/classes/functions
+  without changing the exported API shape. Verification rerun by reviewer: uv run
+  pytest -q tests/test_api_contract_docs.py -> 2 passed; uv run pytest -q tests/test_heru_cli.py
+  tests/test_base_direct.py -> 48 passed; required downstream compatibility suite
+  from ~/git/litehive, uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, with 3 unrelated
+  Typer deprecation warnings. Evidence supports that all acceptance criteria are satisfied
+  and no regression was detected.'
+feedback: 'Validated T-0006 against the acceptance criteria and accepted it. I inspected
+  the scoped diff in README.md, heru/__init__.py, heru/base.py, heru/main.py, heru/types.py,
+  and the six public adapter modules, plus the new tests/test_api_contract_docs.py
+  coverage. README now has an API Contract section that explicitly lists the stable
+  public names called out by the task: heru.get_engine(name), heru.ENGINE_CHOICES,
+  heru.main.main(argv=None), heru.base.ExternalCLIAdapter, heru.base.CLIInvocation,
+  heru.base.CLIExecutionResult, the six current adapter classes (CodexCLIAdapter,
+  ClaudeCLIAdapter, CopilotCLIAdapter, GeminiCLIAdapter, GozCLIAdapter, and the currently
+  exported OpenCodeAdapter), and the public heru.types models with one-line guarantees.
+  The same section explicitly marks heru._engine_detection, heru._continuation, and
+  each heru.adapters._*_impl module as internal/changeable without notice, adds a
+  stability matrix seeded with v0.1.0, and documents the breaking-change process requiring
+  a semver-major bump, CHANGELOG entry, and migration note for litehive/other consumers.
+  I also verified the public-status docstrings were added to the targeted public modules/classes/functions
+  without changing the exported API shape. Verification rerun by reviewer: uv run
+  pytest -q tests/test_api_contract_docs.py -> 2 passed; uv run pytest -q tests/test_heru_cli.py
+  tests/test_base_direct.py -> 48 passed; required downstream compatibility suite
+  from ~/git/litehive, uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, with 3 unrelated
+  Typer deprecation warnings. Evidence supports that all acceptance criteria are satisfied
+  and no regression was detected.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 92
+hook_results: []
+created_at: '2026-04-10T20:26:15+00:00'

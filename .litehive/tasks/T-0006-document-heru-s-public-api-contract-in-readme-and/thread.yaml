@@ -1,0 +1,139 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Reviewed current repo state for task T-0006.\n\nWhat I verified:\n- README\
+    \ already documents usage, event schema, layout, and litehive smoke-test expectations,\
+    \ but it does not yet have an `API Contract` section or a semver stability matrix.\n\
+    - Public modules already have partial top-level docstrings, but the acceptance\
+    \ criteria are not met for per-public-class/function contract callouts.\n- The\
+    \ stable surface in code is larger than the task text suggests because `heru/__init__.py`\
+    \ exports additional names; documenting the existing export surface is safe, while\
+    \ shrinking or renaming exports would be a breaking change.\n- The opencode adapter\
+    \ class is currently named `OpenCodeAdapter` in code and tests, not `OpencodeCLIAdapter`;\
+    \ the implementation should document the current public name rather than rename\
+    \ it under this task.\n- Internal modules are clearly discoverable by path (`heru/_*.py`,\
+    \ `heru/adapters/_*_impl.py`) and can be listed explicitly in README as unstable/internal.\n\
+    \nTests run:\n- None. Grooming only; no code changes were made.\n\nImplementation\
+    \ plan for the next stage:\n1. Add a new `API Contract` section to `README.md`\
+    \ that separates stable public API from internal modules.\n2. Enumerate each stable\
+    \ public name that callers are expected to rely on now: `get_engine`, `ENGINE_CHOICES`,\
+    \ `ExternalCLIAdapter`, `CLIInvocation`, `CLIExecutionResult`, `main`, the six\
+    \ adapter classes actually present in code (`CodexCLIAdapter`, `ClaudeCLIAdapter`,\
+    \ `CopilotCLIAdapter`, `GeminiCLIAdapter`, `GozCLIAdapter`, `OpenCodeAdapter`),\
+    \ and the Pydantic models in `heru.types`.\n3. Give each listed public name a\
+    \ one-line guarantee focused on stability boundaries, not implementation detail.\n\
+    4. Add an internal-module subsection that explicitly marks `_engine_detection`,\
+    \ `_continuation`, and each `_..._impl.py` module as private and changeable without\
+    \ notice.\n5. Add a small stability matrix seeded with `v0.1.0` and a \u201Cno\
+    \ documented breaking public API changes yet\u201D entry so future releases have\
+    \ a place to record semver history.\n6. Add a short breaking-change submission\
+    \ note requiring a semver bump, CHANGELOG entry, and migration note for litehive/other\
+    \ consumers.\n7. Update docstrings in `heru/__init__.py`, `heru/base.py`, `heru/main.py`,\
+    \ `heru/types.py`, and each public adapter module/class/function so they explicitly\
+    \ state public status and what callers may rely on.\n8. Add focused tests that\
+    \ assert the README contains the API Contract section and that the targeted public\
+    \ modules/classes/functions carry the new public-status docstrings.\n9. Run targeted\
+    \ heru pytest coverage for the new documentation/docstring assertions, then run\
+    \ the required litehive smoke suite before handing off.\n\nScope/acceptance clarification:\n\
+    - Treat this as documentation and docstring work only. Do not rename exports or\
+    \ reduce `__all__` in this task.\n- Where the task text says `OpencodeCLIAdapter`,\
+    \ implement against the actual current public class name `OpenCodeAdapter` unless\
+    \ product explicitly wants a semver-major rename task.\n\nTASK_UPDATE:\n  plan:\n\
+    \    - Add a README API Contract section that lists stable public names and internal\
+    \ modules.\n    - Document the current exported adapter name `OpenCodeAdapter`\
+    \ instead of renaming it in this task.\n    - Add public-status docstrings to\
+    \ the documented modules/classes/functions.\n    - Add focused pytest coverage\
+    \ for the new README/docstring contract text.\n    - Run heru-targeted tests and\
+    \ the required litehive smoke suite.\n  pm_complexity: simple\n  planned_effort:\
+    \ s"
+  files_changed: []
+  created_at: '2026-04-10T20:16:44+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Implemented T-0006 as scoped documentation and docstring work only. Added
+    a new README API Contract section that lists the stable public surface: get_engine,
+    ENGINE_CHOICES, heru.main.main, ExternalCLIAdapter, CLIInvocation, CLIExecutionResult,
+    the six current adapter classes (including the current exported OpenCodeAdapter
+    name), and all public pydantic models in heru.types with one-line guarantees.
+    The same section now explicitly marks heru._engine_detection, heru._continuation,
+    and each heru.adapters._*_impl module as internal/changeable without notice, adds
+    a stability matrix seeded with v0.1.0, and documents the required breaking-change
+    process (semver-major bump, CHANGELOG entry, migration note for litehive/other
+    consumers). Updated module/class/function docstrings in heru/__init__.py, heru/base.py,
+    heru/main.py, heru/types.py, and each public adapter module so the public status
+    and caller-reliable contract are called out inline. Added focused regression coverage
+    in tests/test_api_contract_docs.py that asserts the README contract section contains
+    the required public/internal entries and that the targeted public modules/classes/functions
+    have public-contract docstrings. Verification: uv run pytest -q tests/test_api_contract_docs.py
+    -> 2 passed; uv run pytest -q tests/test_heru_cli.py tests/test_base_direct.py
+    -> 48 passed; required litehive smoke suite from ~/git/litehive (tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q) -> 197 passed, 3 unrelated Typer deprecation warnings. This meets the acceptance
+    criteria without changing the exported API shape.'
+  files_changed:
+  - README.md
+  - heru/__init__.py
+  - heru/base.py
+  - heru/main.py
+  - heru/types.py
+  - heru/adapters/codex.py
+  - heru/adapters/claude.py
+  - heru/adapters/copilot.py
+  - heru/adapters/gemini.py
+  - heru/adapters/goz.py
+  - heru/adapters/opencode.py
+  - tests/test_api_contract_docs.py
+  created_at: '2026-04-10T20:22:48+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Verified the implementation against the T-0006 acceptance criteria. I
+    inspected the scoped diff in README.md, heru/__init__.py, heru/base.py, heru/main.py,
+    heru/types.py, and the six public adapter modules, and confirmed the change is
+    documentation/docstring-only with no public API shape changes. README now includes
+    an API Contract section that lists the stable public names called out by the task:
+    get_engine, ENGINE_CHOICES, heru.main.main, ExternalCLIAdapter, CLIInvocation,
+    CLIExecutionResult, the six current adapter classes (including the currently exported
+    OpenCodeAdapter name), and the public heru.types models with one-line guarantees.
+    The same section explicitly marks internal modules such as heru._engine_detection,
+    heru._continuation, and heru.adapters._*_impl as unstable, adds a stability matrix
+    seeded with v0.1.0, and documents the breaking-change process requiring a semver-major
+    bump, CHANGELOG entry, and migration note for litehive/other consumers. I also
+    verified the new focused regression test in tests/test_api_contract_docs.py is
+    meaningful rather than trivial: it asserts the README contains the required public/internal
+    entries and parses the source AST to ensure the targeted public classes/functions
+    have explicit public-contract docstrings. Independent verification run: uv run
+    pytest -q tests/test_api_contract_docs.py -> 2 passed; uv run pytest -q tests/test_heru_cli.py
+    tests/test_base_direct.py -> 48 passed; required downstream contract suite from
+    ~/git/litehive, uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, with 3 unrelated
+    Typer deprecation warnings. Acceptance criteria are satisfied and I found no regressions.'
+  files_changed: []
+  created_at: '2026-04-10T20:24:37+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Validated T-0006 against the acceptance criteria and accepted it. I inspected
+    the scoped diff in README.md, heru/__init__.py, heru/base.py, heru/main.py, heru/types.py,
+    and the six public adapter modules, plus the new tests/test_api_contract_docs.py
+    coverage. README now has an API Contract section that explicitly lists the stable
+    public names called out by the task: heru.get_engine(name), heru.ENGINE_CHOICES,
+    heru.main.main(argv=None), heru.base.ExternalCLIAdapter, heru.base.CLIInvocation,
+    heru.base.CLIExecutionResult, the six current adapter classes (CodexCLIAdapter,
+    ClaudeCLIAdapter, CopilotCLIAdapter, GeminiCLIAdapter, GozCLIAdapter, and the
+    currently exported OpenCodeAdapter), and the public heru.types models with one-line
+    guarantees. The same section explicitly marks heru._engine_detection, heru._continuation,
+    and each heru.adapters._*_impl module as internal/changeable without notice, adds
+    a stability matrix seeded with v0.1.0, and documents the breaking-change process
+    requiring a semver-major bump, CHANGELOG entry, and migration note for litehive/other
+    consumers. I also verified the public-status docstrings were added to the targeted
+    public modules/classes/functions without changing the exported API shape. Verification
+    rerun by reviewer: uv run pytest -q tests/test_api_contract_docs.py -> 2 passed;
+    uv run pytest -q tests/test_heru_cli.py tests/test_base_direct.py -> 48 passed;
+    required downstream compatibility suite from ~/git/litehive, uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q -> 197 passed, with 3 unrelated Typer deprecation warnings. Evidence supports
+    that all acceptance criteria are satisfied and no regression was detected.'
+  files_changed: []
+  created_at: '2026-04-10T20:26:07+00:00'
