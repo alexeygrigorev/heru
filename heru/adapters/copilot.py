@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from heru.adapters._copilot_impl import (
+    copilot_continuation,
     copilot_stream_event_adapter,
     copilot_usage_observation,
 )
@@ -13,7 +14,7 @@ from heru.base import (
     extract_stream_transcript,
     iter_jsonl_payloads,
 )
-from heru.types import UnifiedEvent
+from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 class CopilotCLIAdapter(ExternalCLIAdapter):
@@ -24,6 +25,9 @@ class CopilotCLIAdapter(ExternalCLIAdapter):
         strips_environment=False,
         transcript_format="jsonl",
     )
+
+    def supports_continue_latest(self) -> bool:
+        return True
 
     def build_command(
         self,
@@ -47,7 +51,10 @@ class CopilotCLIAdapter(ExternalCLIAdapter):
             str(cwd),
         ]
         if resume_session_id:
-            command.append("--continue" if resume_session_id == "latest" else f"--resume={resume_session_id}")
+            if self.is_latest_continuation(resume_session_id):
+                command.append("--continue")
+            else:
+                command.append(f"--resume={resume_session_id}")
         if model:
             command.extend(["--model", model])
         return command
@@ -96,3 +103,9 @@ class CopilotCLIAdapter(ExternalCLIAdapter):
         native_payload: dict[str, object],
     ) -> UnifiedEvent | None:
         return super().translate_native_event(native_payload)
+
+    def extract_continuation(
+        self,
+        execution: CLIExecutionResult | None,
+    ) -> RuntimeEngineContinuation | None:
+        return self.extract_continuation_from_payloads(execution, copilot_continuation)

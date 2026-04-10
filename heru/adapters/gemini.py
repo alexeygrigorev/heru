@@ -28,6 +28,9 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
         transcript_format="jsonl",
     )
 
+    def supports_continue_latest(self) -> bool:
+        return True
+
     def build_command(
         self,
         prompt: str,
@@ -39,7 +42,9 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
     ) -> list[str]:
         command = [self.binary, "-p", prompt, "--output-format", "stream-json", "--yolo"]
         if resume_session_id:
-            command.extend(["--resume", resume_session_id])
+            command.append("--resume")
+            if not self.is_latest_continuation(resume_session_id):
+                command.append(resume_session_id)
         if model:
             command.extend(["-m", model])
         return command

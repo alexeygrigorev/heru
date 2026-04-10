@@ -50,6 +50,19 @@ def test_copilot_translates_usage_to_unified_event() -> None:
     assert event.raw == payload
 
 
+def test_copilot_translates_continuation_to_unified_event() -> None:
+    payload = {
+        "type": "assistant.message",
+        "data": {"content": "hello", "sessionId": "copilot-session"},
+    }
+
+    events = get_engine("copilot").translate_native_events(payload)
+
+    assert [event.kind for event in events] == ["message", "continuation"]
+    assert events[-1].continuation_id == "copilot-session"
+    assert all(event.raw == payload for event in events)
+
+
 def test_gemini_translates_init_to_continuation_event() -> None:
     payload = {"type": "init", "session_id": "gemini-session", "model": "gemini-2.5-pro"}
 
@@ -111,3 +124,17 @@ def test_render_unified_output_serializes_jsonl_with_sequence_and_raw() -> None:
     assert [line["sequence"] for line in lines] == [0, 1]
     assert lines[0]["raw"]["type"] == "assistant.message"
     assert lines[1]["usage_delta"] == {"inputTokens": 3, "outputTokens": 2}
+
+
+def test_render_unified_output_appends_continuation_event_at_end() -> None:
+    stdout = (
+        '{"type":"init","session_id":"gemini-session","model":"gemini-2.5-pro"}\n'
+        '{"type":"content","text":"hello again"}\n'
+    )
+
+    rendered = get_engine("gemini").render_unified_output(stdout)
+    lines = [json.loads(line) for line in rendered.splitlines()]
+
+    assert [line["kind"] for line in lines] == ["message", "continuation"]
+    assert lines[-1]["continuation_id"] == "gemini-session"
+    assert lines[-1]["sequence"] == 1

@@ -38,6 +38,8 @@ class GozCLIAdapter(ExternalCLIAdapter):
     ) -> list[str]:
         command = [self.binary, "run", "--format", "json"]
         if resume_session_id:
+            if self.is_latest_continuation(resume_session_id):
+                raise ValueError("goz does not support resuming the latest session without an explicit id")
             command.extend(["--resume-session", resume_session_id])
         if model:
             command.extend(["--model", model])

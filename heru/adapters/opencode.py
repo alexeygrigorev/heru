@@ -25,6 +25,9 @@ class OpenCodeAdapter(ExternalCLIAdapter):
         strips_environment=True,
         transcript_format="jsonl",
     )
+    def supports_continue_latest(self) -> bool:
+        return True
+
     DEFAULT_STRIPPED_ENV_VARS = (
         "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_PROFILE", "AWS_REGION",
         "AWS_BEARER_TOKEN_BEDROCK", "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_ROLE_ARN", "OPENAI_API_KEY",
@@ -55,10 +58,10 @@ class OpenCodeAdapter(ExternalCLIAdapter):
     ) -> list[str]:
         command = [self.binary, "run", "--format", "json", "--dir", str(cwd)]
         if resume_session_id:
-            # opencode supports --continue for the most recent session and
-            # --session <id> for a specific id. We always have the id from
-            # extract_continuation, so emit --session.
-            command.extend(["--session", resume_session_id])
+            if self.is_latest_continuation(resume_session_id):
+                command.append("--continue")
+            else:
+                command.extend(["--session", resume_session_id])
         if model:
             command.extend(["--model", model])
         command.append(prompt)

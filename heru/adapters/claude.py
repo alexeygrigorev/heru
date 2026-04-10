@@ -36,6 +36,9 @@ class ClaudeCLIAdapter(ExternalCLIAdapter):
     )
     _MAX_ARG_PROMPT_BYTES: int = 120_000
 
+    def supports_continue_latest(self) -> bool:
+        return True
+
     def __init__(
         self,
         *,
@@ -60,7 +63,9 @@ class ClaudeCLIAdapter(ExternalCLIAdapter):
     ) -> list[str]:
         command = [self.binary]
         if resume_session_id:
-            command.extend(["--resume", resume_session_id])
+            command.append("--resume")
+            if not self.is_latest_continuation(resume_session_id):
+                command.append(resume_session_id)
             if not prompt_via_stdin:
                 command.extend(["-p", prompt])
         elif not prompt_via_stdin:

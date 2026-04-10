@@ -1,5 +1,5 @@
 from heru.base import StreamEventAdapter
-from heru.types import EngineUsageWindow, LiveEvent
+from heru.types import EngineUsageWindow, LiveEvent, RuntimeEngineContinuation
 
 
 def copilot_usage_observation(
@@ -58,7 +58,26 @@ def copilot_stream_event_adapter() -> StreamEventAdapter:
         text_deltas=text_deltas,
         errors=errors,
         live_events=live_events,
+        continuation_id=copilot_continuation_id,
     )
+
+
+def copilot_continuation(payload: dict[str, object]) -> RuntimeEngineContinuation | None:
+    for container in (payload, payload.get("data")):
+        if not isinstance(container, dict):
+            continue
+        for field in ("sessionId", "session_id", "conversationId", "threadId", "thread_id"):
+            value = container.get(field)
+            if isinstance(value, str) and value:
+                if "thread" in field.lower():
+                    return RuntimeEngineContinuation(thread_id=value)
+                return RuntimeEngineContinuation(session_id=value)
+    return None
+
+
+def copilot_continuation_id(payload: dict[str, object]) -> str | None:
+    continuation = copilot_continuation(payload)
+    return continuation.resume_id if continuation is not None else None
 
 
 def live_events(payload: dict[str, object]) -> list[LiveEvent]:
