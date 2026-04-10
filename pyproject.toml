@@ -8,6 +8,7 @@ authors = [{name = "Alexey Grigorev"}]
 license = {text = "MIT"}
 dependencies = [
     "pydantic>=2.11.0",
+    "typer>=0.16.0",
 ]
 
 [project.optional-dependencies]
