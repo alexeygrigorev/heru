@@ -6,15 +6,15 @@ task_type: adapter
 model: null
 mode: tasks
 pipeline_mode: full
-status: queued
+status: in_progress
 flag_reason: null
 flag_count: 0
-pipeline_status: backlog
+pipeline_status: commit_to_git
 priority: medium
 pm_complexity: simple
 planned_effort: s
 created_at: '2026-04-10T20:50:13+00:00'
-updated_at: '2026-04-10T20:50:13+00:00'
+updated_at: '2026-04-10T21:08:14+00:00'
 goal: "Add a new CLI subcommand to heru: 'heru usage' prints usage/quota status for\
   \ every registered provider (codex, claude, copilot, zai which covers opencode+goz),\
   \ and 'heru usage <name>' prints it for one. Build on the existing heru/quota/ Python\
@@ -56,7 +56,35 @@ plan:
 - Implement the adapter change close to the integration seam.
 - Verify the adapter path with a focused test or representative run.
 human_checkpoints: []
-subagents: []
+subagents:
+- id: SA-0001
+  role: planner
+  engine: codex
+  status: completed
+  path: subagents/SA-0001-planner
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0002
+  role: swe
+  engine: codex
+  status: completed
+  path: subagents/SA-0002-swe
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0003
+  role: qa
+  engine: codex
+  status: completed
+  path: subagents/SA-0003-qa
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0004
+  role: reviewer
+  engine: codex
+  status: completed
+  path: subagents/SA-0004-reviewer
+  sandboxed: false
+  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0012 add-heru-usage-cli-subcommand-show-usage-for-all'

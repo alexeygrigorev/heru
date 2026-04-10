@@ -1,0 +1,56 @@
+task_id: T-0012
+step: implementing
+verdict: pass
+source: agent
+summary: 'Implemented a new top-level ''heru usage'' CLI subcommand in heru/main.py
+  without changing the internal heru/quota module naming. Added provider normalization
+  for codex, claude, copilot, zai, and gemini (unsupported), human-readable one-line
+  output, single-provider form, JSON output, helpful unknown-provider errors, and
+  non-crashing error reporting for missing auth or missing credential state via the
+  provider check_* helpers and block_reason helpers. Added fixture-driven CLI tests
+  in tests/test_heru_cli.py covering all-provider output, single-provider output,
+  gemini unsupported, unknown provider non-zero exit, missing-auth reporting, and
+  --json output using monkeypatched quota helpers only; no network calls. Updated
+  README usage docs for ''heru usage'', ''heru usage <name>'', ''--json'', and gemini
+  unsupported behavior. Verification: ''uv run pytest tests/ -q'' passed (243 passed),
+  and the required litehive smoke suite passed from ~/git/litehive: ''uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q'' (198 passed, 3 warnings).'
+feedback: 'Implemented a new top-level ''heru usage'' CLI subcommand in heru/main.py
+  without changing the internal heru/quota module naming. Added provider normalization
+  for codex, claude, copilot, zai, and gemini (unsupported), human-readable one-line
+  output, single-provider form, JSON output, helpful unknown-provider errors, and
+  non-crashing error reporting for missing auth or missing credential state via the
+  provider check_* helpers and block_reason helpers. Added fixture-driven CLI tests
+  in tests/test_heru_cli.py covering all-provider output, single-provider output,
+  gemini unsupported, unknown provider non-zero exit, missing-auth reporting, and
+  --json output using monkeypatched quota helpers only; no network calls. Updated
+  README usage docs for ''heru usage'', ''heru usage <name>'', ''--json'', and gemini
+  unsupported behavior. Verification: ''uv run pytest tests/ -q'' passed (243 passed),
+  and the required litehive smoke suite passed from ~/git/litehive: ''uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q'' (198 passed, 3 warnings).'
+submitted_via_cli: true
+files_changed:
+- README.md
+- heru/main.py
+- tests/test_heru_cli.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 465
+hook_results: []
+created_at: '2026-04-10T21:06:14+00:00'

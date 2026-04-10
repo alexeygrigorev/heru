@@ -1,0 +1,91 @@
+task_id: T-0012
+step: grooming
+verdict: pass
+source: agent
+summary: 'Repo inspection confirms the task is implementable without widening heru
+  public API. Verified current CLI entrypoint in heru/main.py is Typer-based with
+  per-engine subcommands plus a legacy argparse path, so adding a top-level usage
+  subcommand fits the existing command surface. Verified the required provider helpers
+  already exist under heru/quota/: check_codex_quota/codex_quota_block_reason, check_claude_quota/claude_quota_block_reason,
+  check_copilot_quota/copilot_quota_block_reason, and check_zai_quota/zai_quota_block_reason.
+  Verified their status models are intentionally inconsistent: codex and claude expose
+  percentages and reset times, copilot exposes remaining/entitlement/reset, and zai
+  exposes API-call and token windows. Implementation should add a CLI-only normalization
+  layer that maps each provider to one stable output shape for human text and JSON,
+  rather than leaking raw provider dataclasses into the command. Verified existing
+  CLI coverage lives in tests/test_heru_cli.py and tests/test_cli_smoke.py, making
+  fixture-driven monkeypatch tests the right seam for this task. No automated tests
+  were run in grooming; implementation stage must run targeted pytest first, then
+  uv run pytest tests/, then the required litehive smoke suite in ~/git/litehive.
+  Recommended implementation plan: 1) add usage subcommand in heru/main.py with optional
+  provider arg and --json; valid names should be codex, claude, copilot, zai, and
+  gemini, where gemini returns unsupported and unknown names return non-zero with
+  valid-name guidance. 2) add a small internal formatter or normalizer helper in main.py
+  or a private module that produces a stable record with provider, status (ok, blocked,
+  error, unsupported), used, limit, remaining, unit, reset_window or reset_at text,
+  block_reason, and raw error text when credentials are missing. 3) for providers
+  with multiple internal windows, choose a documented primary presentation per provider
+  for the single-line output while keeping enough detail in JSON to preserve meaning;
+  likely codex=max-used window with earliest_reset_at, claude=max-used active window,
+  copilot premium interactions window, zai whichever of api_calls or tokens has higher
+  utilization. 4) add focused tests covering all-provider listing, single-provider
+  success, gemini unsupported, unknown provider error, missing-auth or error pass-through,
+  and JSON output without any real network or subprocess calls. 5) update README usage
+  section to document heru usage and heru usage <name> and note gemini is unsupported.
+  PM assessment remains simple / s. No follow-up litehive task appears necessary unless
+  implementation decides the JSON shape should become a documented public contract
+  beyond CLI behavior.'
+feedback: 'Repo inspection confirms the task is implementable without widening heru
+  public API. Verified current CLI entrypoint in heru/main.py is Typer-based with
+  per-engine subcommands plus a legacy argparse path, so adding a top-level usage
+  subcommand fits the existing command surface. Verified the required provider helpers
+  already exist under heru/quota/: check_codex_quota/codex_quota_block_reason, check_claude_quota/claude_quota_block_reason,
+  check_copilot_quota/copilot_quota_block_reason, and check_zai_quota/zai_quota_block_reason.
+  Verified their status models are intentionally inconsistent: codex and claude expose
+  percentages and reset times, copilot exposes remaining/entitlement/reset, and zai
+  exposes API-call and token windows. Implementation should add a CLI-only normalization
+  layer that maps each provider to one stable output shape for human text and JSON,
+  rather than leaking raw provider dataclasses into the command. Verified existing
+  CLI coverage lives in tests/test_heru_cli.py and tests/test_cli_smoke.py, making
+  fixture-driven monkeypatch tests the right seam for this task. No automated tests
+  were run in grooming; implementation stage must run targeted pytest first, then
+  uv run pytest tests/, then the required litehive smoke suite in ~/git/litehive.
+  Recommended implementation plan: 1) add usage subcommand in heru/main.py with optional
+  provider arg and --json; valid names should be codex, claude, copilot, zai, and
+  gemini, where gemini returns unsupported and unknown names return non-zero with
+  valid-name guidance. 2) add a small internal formatter or normalizer helper in main.py
+  or a private module that produces a stable record with provider, status (ok, blocked,
+  error, unsupported), used, limit, remaining, unit, reset_window or reset_at text,
+  block_reason, and raw error text when credentials are missing. 3) for providers
+  with multiple internal windows, choose a documented primary presentation per provider
+  for the single-line output while keeping enough detail in JSON to preserve meaning;
+  likely codex=max-used window with earliest_reset_at, claude=max-used active window,
+  copilot premium interactions window, zai whichever of api_calls or tokens has higher
+  utilization. 4) add focused tests covering all-provider listing, single-provider
+  success, gemini unsupported, unknown provider error, missing-auth or error pass-through,
+  and JSON output without any real network or subprocess calls. 5) update README usage
+  section to document heru usage and heru usage <name> and note gemini is unsupported.
+  PM assessment remains simple / s. No follow-up litehive task appears necessary unless
+  implementation decides the JSON shape should become a documented public contract
+  beyond CLI behavior.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 75
+hook_results: []
+created_at: '2026-04-10T20:58:29+00:00'

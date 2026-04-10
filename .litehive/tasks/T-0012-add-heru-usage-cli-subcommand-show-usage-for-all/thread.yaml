@@ -1,0 +1,190 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: 'Repo inspection confirms the task is implementable without widening heru''s
+    public API. Verified current CLI entrypoint in heru/main.py is Typer-based with
+    per-engine subcommands plus a legacy argparse path, so adding a top-level  subcommand
+    fits the existing command surface. Verified the required provider helpers already
+    exist under heru/quota/: check_codex_quota/codex_quota_block_reason, check_claude_quota/claude_quota_block_reason,
+    check_copilot_quota/copilot_quota_block_reason, and check_zai_quota/zai_quota_block_reason.
+    Verified their status models are intentionally inconsistent (codex/claude expose
+    percentages and reset times, copilot exposes remaining/entitlement/reset, zai
+    exposes API-call and token windows), so implementation should add a CLI-only normalization
+    layer that maps each provider to one stable output shape for human text and ,
+    rather than leaking raw provider dataclasses into the command. Verified existing
+    CLI coverage lives in tests/test_heru_cli.py and tests/test_cli_smoke.py, making
+    fixture-driven monkeypatch tests the right seam for this task. No automated tests
+    were run in grooming; implementation stage must run targeted pytest first, then
+    ============================= test session starts ==============================
+
+    platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0
+
+    rootdir: /home/alexey/git/heru/.litehive/worktrees/T-0012-add-heru-usage-cli-subcommand-show-usage-for-all
+
+    configfile: pyproject.toml
+
+    plugins: timeout-2.4.0
+
+    collected 234 items
+
+
+    tests/contract/test_adapter_contract.py ...............................  [ 13%]
+
+    tests/contract/test_base_contract.py ......                              [ 15%]
+
+    tests/contract/test_entrypoints_contract.py .......                      [ 18%]
+
+    tests/contract/test_types_contract.py ...............                    [ 25%]
+
+    tests/test_api_contract_docs.py ..                                       [ 26%]
+
+    tests/test_base_direct.py .......                                        [ 29%]
+
+    tests/test_claude_adapter_direct.py ...........                          [ 33%]
+
+    tests/test_cli_smoke.py ...                                              [ 35%]
+
+    tests/test_codex_adapter_direct.py ...............                       [ 41%]
+
+    tests/test_codex_quota.py ...............                                [ 47%]
+
+    tests/test_copilot_adapter_direct.py ..........                          [ 52%]
+
+    tests/test_gemini_adapter_direct.py ..........                           [ 56%]
+
+    tests/test_goz_adapter.py ......                                         [ 58%]
+
+    tests/test_goz_adapter_direct.py ..........                              [ 63%]
+
+    tests/test_heru_cli.py .........................................         [ 80%]
+
+    tests/test_inactivity_timeout.py ...                                     [ 82%]
+
+    tests/test_opencode_adapter_direct.py ..........                         [ 86%]
+
+    tests/test_pre_commit_hook.py ......                                     [ 88%]
+
+    tests/test_quota_parsers.py ...........                                  [ 93%]
+
+    tests/test_resume_adapters.py ......                                     [ 96%]
+
+    tests/test_unified_events.py .........                                   [100%]
+
+
+    ============================= 234 passed in 5.07s ==============================,
+    then the required litehive smoke suite in ~/git/litehive. Recommended implementation
+    plan: 1) add  subcommand in heru/main.py with optional provider arg and ; valid
+    names should be codex/claude/copilot/zai/gemini, where gemini returns unsupported
+    and unknown names return non-zero with valid-name guidance. 2) add a small internal
+    formatter/normalizer module or helper in main.py that produces a stable record
+    with provider, status (), used, limit, remaining, unit, reset_window/reset_at
+    text, block_reason, and raw error text when credentials are missing. 3) for providers
+    with multiple internal windows, choose a documented primary presentation per provider
+    for the single-line output while keeping enough detail in JSON to preserve meaning;
+    likely codex=max-used window with earliest_reset_at, claude=max-used active window,
+    copilot premium interactions window, zai whichever of api_calls/tokens has higher
+    utilization. 4) add focused tests covering all-provider listing, single-provider
+    success, gemini unsupported, unknown provider error, missing-auth/error pass-through,
+    and JSON output without any real network or subprocess calls. 5) update README
+    usage section to document  and  and note gemini is unsupported. PM assessment
+    remains simple / s. No follow-up litehive task appears necessary unless implementation
+    decides JSON shape should become a documented public contract beyond CLI behavior.'
+  files_changed: []
+  created_at: '2026-04-10T20:58:14+00:00'
+- role: planner
+  step: grooming
+  verdict: pass
+  message: 'Repo inspection confirms the task is implementable without widening heru
+    public API. Verified current CLI entrypoint in heru/main.py is Typer-based with
+    per-engine subcommands plus a legacy argparse path, so adding a top-level usage
+    subcommand fits the existing command surface. Verified the required provider helpers
+    already exist under heru/quota/: check_codex_quota/codex_quota_block_reason, check_claude_quota/claude_quota_block_reason,
+    check_copilot_quota/copilot_quota_block_reason, and check_zai_quota/zai_quota_block_reason.
+    Verified their status models are intentionally inconsistent: codex and claude
+    expose percentages and reset times, copilot exposes remaining/entitlement/reset,
+    and zai exposes API-call and token windows. Implementation should add a CLI-only
+    normalization layer that maps each provider to one stable output shape for human
+    text and JSON, rather than leaking raw provider dataclasses into the command.
+    Verified existing CLI coverage lives in tests/test_heru_cli.py and tests/test_cli_smoke.py,
+    making fixture-driven monkeypatch tests the right seam for this task. No automated
+    tests were run in grooming; implementation stage must run targeted pytest first,
+    then uv run pytest tests/, then the required litehive smoke suite in ~/git/litehive.
+    Recommended implementation plan: 1) add usage subcommand in heru/main.py with
+    optional provider arg and --json; valid names should be codex, claude, copilot,
+    zai, and gemini, where gemini returns unsupported and unknown names return non-zero
+    with valid-name guidance. 2) add a small internal formatter or normalizer helper
+    in main.py or a private module that produces a stable record with provider, status
+    (ok, blocked, error, unsupported), used, limit, remaining, unit, reset_window
+    or reset_at text, block_reason, and raw error text when credentials are missing.
+    3) for providers with multiple internal windows, choose a documented primary presentation
+    per provider for the single-line output while keeping enough detail in JSON to
+    preserve meaning; likely codex=max-used window with earliest_reset_at, claude=max-used
+    active window, copilot premium interactions window, zai whichever of api_calls
+    or tokens has higher utilization. 4) add focused tests covering all-provider listing,
+    single-provider success, gemini unsupported, unknown provider error, missing-auth
+    or error pass-through, and JSON output without any real network or subprocess
+    calls. 5) update README usage section to document heru usage and heru usage <name>
+    and note gemini is unsupported. PM assessment remains simple / s. No follow-up
+    litehive task appears necessary unless implementation decides the JSON shape should
+    become a documented public contract beyond CLI behavior.'
+  files_changed: []
+  created_at: '2026-04-10T20:58:23+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Implemented a new top-level ''heru usage'' CLI subcommand in heru/main.py
+    without changing the internal heru/quota module naming. Added provider normalization
+    for codex, claude, copilot, zai, and gemini (unsupported), human-readable one-line
+    output, single-provider form, JSON output, helpful unknown-provider errors, and
+    non-crashing error reporting for missing auth or missing credential state via
+    the provider check_* helpers and block_reason helpers. Added fixture-driven CLI
+    tests in tests/test_heru_cli.py covering all-provider output, single-provider
+    output, gemini unsupported, unknown provider non-zero exit, missing-auth reporting,
+    and --json output using monkeypatched quota helpers only; no network calls. Updated
+    README usage docs for ''heru usage'', ''heru usage <name>'', ''--json'', and gemini
+    unsupported behavior. Verification: ''uv run pytest tests/ -q'' passed (243 passed),
+    and the required litehive smoke suite passed from ~/git/litehive: ''uv run pytest
+    tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+    tests/test_codex_quota.py -q'' (198 passed, 3 warnings).'
+  files_changed: []
+  created_at: '2026-04-10T21:06:06+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Verified the new CLI adapter seam at heru/main.py for ''heru usage'' and
+    the added fixture-driven coverage in tests/test_heru_cli.py. Confirmed the command
+    supports the all-provider form and single-provider form for codex, claude, copilot,
+    and zai; accepts gemini and reports unsupported without crashing; returns a non-zero
+    helpful error for unknown providers; includes used, limit, remaining, unit, reset
+    window/reset time, and active block_reason in output; reports provider auth failures
+    via the provider error text instead of crashing; and emits machine-readable JSON
+    with --json. Verified README documents ''heru usage'', ''heru usage <name>'',
+    ''--json'', and gemini unsupported behavior. Test evidence: ''uv run pytest tests/test_heru_cli.py
+    -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+    passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and
+    required litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+    found.'
+  files_changed: []
+  created_at: '2026-04-10T21:07:09+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. I verified the new top-level ''heru usage'' CLI surface in heru/main.py
+    and the matching fixture-driven coverage in tests/test_heru_cli.py, plus the README
+    documentation. The command now supports ''heru usage'' for all supported providers
+    with usage endpoints (codex, claude, copilot, zai), ''heru usage <name>'' for
+    a single provider, ''heru usage gemini'' as an unsupported but non-crashing path,
+    ''--json'' machine-readable output, and a helpful non-zero error for unknown providers
+    listing valid names. The formatter includes used, limit, remaining, unit, reset_window,
+    reset_at, and block_reason/error when present, and missing auth is reported as
+    provider-specific error output instead of a crash. Evidence: ''uv run pytest tests/test_heru_cli.py
+    -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+    passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and
+    required litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+    found.'
+  files_changed: []
+  created_at: '2026-04-10T21:08:07+00:00'

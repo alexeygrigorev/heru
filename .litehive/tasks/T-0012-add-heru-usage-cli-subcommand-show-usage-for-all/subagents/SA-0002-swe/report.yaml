@@ -1,0 +1,31 @@
+status: completed
+summary: "I\u2019m implementing the `heru usage` CLI path now. First I\u2019m checking\
+  \ the current CLI wiring, quota helpers, and existing CLI tests so I can add the\
+  \ subcommand at the adapter boundary without widening the public API."
+files_changed: []
+tests:
+  added: 0
+  passing: 0
+warnings:
+- Agent did not submit verdict via litehive report CLI.
+resource_control:
+  enabled: false
+  profile: no-git
+  backend: null
+  runtime: null
+  image: null
+  network_mode: null
+  workspace_mode: null
+  memory_mb: null
+  cpu_count: null
+  process_limit: null
+  environment: []
+  credential_inputs: []
+  propagated_mounts: []
+interruption_reason: null
+resource_limit_event: null
+continuation:
+  session_id: null
+  thread_id: 019d7930-71a7-7901-b79b-e3ba35310197
+  metadata: {}
+  updated_at: '2026-04-10T21:06:13+00:00'

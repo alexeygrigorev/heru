@@ -1,0 +1,55 @@
+task_id: T-0012
+step: testing
+verdict: pass
+source: agent
+summary: 'Verified the new CLI adapter seam at heru/main.py for ''heru usage'' and
+  the added fixture-driven coverage in tests/test_heru_cli.py. Confirmed the command
+  supports the all-provider form and single-provider form for codex, claude, copilot,
+  and zai; accepts gemini and reports unsupported without crashing; returns a non-zero
+  helpful error for unknown providers; includes used, limit, remaining, unit, reset
+  window/reset time, and active block_reason in output; reports provider auth failures
+  via the provider error text instead of crashing; and emits machine-readable JSON
+  with --json. Verified README documents ''heru usage'', ''heru usage <name>'', ''--json'',
+  and gemini unsupported behavior. Test evidence: ''uv run pytest tests/test_heru_cli.py
+  -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+  passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and required
+  litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+  found.'
+feedback: 'Verified the new CLI adapter seam at heru/main.py for ''heru usage'' and
+  the added fixture-driven coverage in tests/test_heru_cli.py. Confirmed the command
+  supports the all-provider form and single-provider form for codex, claude, copilot,
+  and zai; accepts gemini and reports unsupported without crashing; returns a non-zero
+  helpful error for unknown providers; includes used, limit, remaining, unit, reset
+  window/reset time, and active block_reason in output; reports provider auth failures
+  via the provider error text instead of crashing; and emits machine-readable JSON
+  with --json. Verified README documents ''heru usage'', ''heru usage <name>'', ''--json'',
+  and gemini unsupported behavior. Test evidence: ''uv run pytest tests/test_heru_cli.py
+  -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+  passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and required
+  litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+  found.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 60
+hook_results: []
+created_at: '2026-04-10T21:07:14+00:00'

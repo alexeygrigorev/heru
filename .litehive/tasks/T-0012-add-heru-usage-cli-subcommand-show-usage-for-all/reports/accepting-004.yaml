@@ -1,0 +1,55 @@
+task_id: T-0012
+step: accepting
+verdict: pass
+source: agent
+summary: 'Accepted. I verified the new top-level ''heru usage'' CLI surface in heru/main.py
+  and the matching fixture-driven coverage in tests/test_heru_cli.py, plus the README
+  documentation. The command now supports ''heru usage'' for all supported providers
+  with usage endpoints (codex, claude, copilot, zai), ''heru usage <name>'' for a
+  single provider, ''heru usage gemini'' as an unsupported but non-crashing path,
+  ''--json'' machine-readable output, and a helpful non-zero error for unknown providers
+  listing valid names. The formatter includes used, limit, remaining, unit, reset_window,
+  reset_at, and block_reason/error when present, and missing auth is reported as provider-specific
+  error output instead of a crash. Evidence: ''uv run pytest tests/test_heru_cli.py
+  -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+  passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and required
+  litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+  found.'
+feedback: 'Accepted. I verified the new top-level ''heru usage'' CLI surface in heru/main.py
+  and the matching fixture-driven coverage in tests/test_heru_cli.py, plus the README
+  documentation. The command now supports ''heru usage'' for all supported providers
+  with usage endpoints (codex, claude, copilot, zai), ''heru usage <name>'' for a
+  single provider, ''heru usage gemini'' as an unsupported but non-crashing path,
+  ''--json'' machine-readable output, and a helpful non-zero error for unknown providers
+  listing valid names. The formatter includes used, limit, remaining, unit, reset_window,
+  reset_at, and block_reason/error when present, and missing auth is reported as provider-specific
+  error output instead of a crash. Evidence: ''uv run pytest tests/test_heru_cli.py
+  -q'' passed (50 passed), ''uv run pytest tests/test_cli_smoke.py -q'' passed (3
+  passed), full heru suite ''uv run pytest tests/ -q'' passed (243 passed), and required
+  litehive smoke suite from ~/git/litehive ''uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q'' passed (198 passed, 3 Typer deprecation warnings only). No acceptance gaps
+  found.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 60
+hook_results: []
+created_at: '2026-04-10T21:08:14+00:00'
