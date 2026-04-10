@@ -1,0 +1,31 @@
+status: completed
+summary: "I\u2019m validating the new `tests_integration/` seam against the adapter\
+  \ contract and acceptance criteria, then I\u2019ll run the focused pytest evidence\
+  \ plus the required litehive smoke suite before issuing the QA verdict."
+files_changed: []
+tests:
+  added: 0
+  passing: 0
+warnings:
+- Agent did not submit verdict via litehive report CLI.
+resource_control:
+  enabled: false
+  profile: no-git
+  backend: null
+  runtime: null
+  image: null
+  network_mode: null
+  workspace_mode: null
+  memory_mb: null
+  cpu_count: null
+  process_limit: null
+  environment: []
+  credential_inputs: []
+  propagated_mounts: []
+interruption_reason: null
+resource_limit_event: null
+continuation:
+  session_id: null
+  thread_id: 019d792c-b7ed-7ba2-9fd4-7c513be53305
+  metadata: {}
+  updated_at: '2026-04-10T20:56:10+00:00'

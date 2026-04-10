@@ -1,0 +1,155 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Inspected the heru repo, the existing adapter surface, current unit tests,\
+    \ and litehive's real-binary integration-test patterns. No code changes made in\
+    \ grooming. Verified the task is correctly scoped as heru-only adapter testing\
+    \ work: there is currently no tests_integration/ directory in this repo; the relevant\
+    \ implementation seam is heru.get_engine(name) -> adapter.build_invocation(...)\
+    \ -> adapter.finalize_invocation(...) -> subprocess.run(...) -> adapter.render_transcript(...)\
+    \ / heru stream readers / extract_engine_continuation(...). Verified current adapter\
+    \ resume behavior: codex, claude, copilot, gemini, and opencode support latest-session\
+    \ continue; goz supports explicit --resume-session only and must reject unified\
+    \ latest-session continue. Verified relevant skip/quota seams already exist in\
+    \ heru/quota/ for codex, claude, copilot, and z.ai-backed engines (opencode/goz),\
+    \ with gemini having no dedicated quota helper today. Verified docs currently\
+    \ mention tests/ and tests/contract/, but not the required tests/ vs tests_integration/\
+    \ split.\n\nExecution plan for implementing: 1. Create tests_integration/conftest.py,\
+    \ helpers.py, README.md, and one test_<engine>.py per adapter. Keep the helper\
+    \ layer heru-only: env parsing via HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS,\
+    \ PATH availability checks via adapter.is_available(), subprocess execution through\
+    \ build_invocation/finalize_invocation/subprocess.run, transcript assertion through\
+    \ adapter.render_transcript or shared stream-reader helpers, and per-engine quota\
+    \ skip hooks using heru/quota/. 2. Port only the reusable shape from ~/git/litehive/tests_integration/helpers.py\
+    \ and the per-engine files; do not copy any litehive task/report/nudge/config/workspace\
+    \ machinery. 3. Add one fresh-run smoke test per engine that prompts for an exact\
+    \ short reply and asserts the parsed transcript contains that reply text. 4. Add\
+    \ continuation coverage tied to T-0003: use a first real run to capture continuation/session/thread\
+    \ id from heru output, then a second run that exercises unified resume behavior.\
+    \ For codex/claude/copilot/gemini/opencode this should cover latest-session continue/native\
+    \ continue where practical; for goz it should explicitly cover resume by captured\
+    \ id via --resume-session semantics, not latest-session continue. 5. Document\
+    \ the split in tests_integration/README.md and CLAUDE.md, including that tests/\
+    \ remains fixture-only and default, while tests_integration/ is opt-in, requires\
+    \ installed CLIs, and is not CI-required. 6. Verification expected in later stages:\
+    \ uv run pytest tests/ with HERU_INTEGRATION_ENGINES unset; a focused opted-in\
+    \ integration run such as HERU_INTEGRATION_ENGINES=codex uv run pytest tests_integration/test_codex.py\
+    \ -q on a machine with codex installed; then the required litehive contract smoke\
+    \ suite from ~/git/litehive.\n\nTASK_UPDATE:\nplan:\n  - Audit the six adapters'\
+    \ invocation, transcript, continuation, and quota seams before copying any litehive\
+    \ test helper structure.\n  - Build a small heru-only integration helper layer\
+    \ under tests_integration/ that centralizes env gating, PATH/quota skips, subprocess\
+    \ execution, transcript extraction, and continuation capture.\n  - Add one fresh-run\
+    \ smoke test per engine adapter.\n  - Add continuation smoke coverage per engine\
+    \ resume capability: latest-session continue for codex/claude/copilot/gemini/opencode,\
+    \ explicit-id resume for goz.\n  - Update tests_integration/README.md and CLAUDE.md\
+    \ to document opt-in execution and the tests/ vs tests_integration/ split.\nadapter_surface:\n\
+    \  entrypoint: heru.get_engine(name) returning the public adapter, then build_invocation/finalize_invocation/subprocess.run/render_transcript/extract_engine_continuation\n\
+    \  inputs: prompt, cwd, model where applicable, resume_session_id, HERU_INTEGRATION_ENGINES,\
+    \ HERU_INTEGRATION_TIMEOUT_SECONDS\n  outputs: parsed transcript text and captured\
+    \ continuation/session identifier from real engine stdout/stderr\nconfig_and_execution_path:\n\
+    \  - Keep provider-specific CLI flags inside each adapter; tests should call the\
+    \ public adapter API rather than reconstruct argv.\n  - Skip gating should happen\
+    \ before launch when env opt-in is missing, binary is absent, or quota helper\
+    \ reports a block condition.\n  - Do not introduce litehive imports, workspace\
+    \ setup, task lifecycle flows, or report/nudge assertions into heru integration\
+    \ tests.\nverification_evidence:\n  - No tests run in grooming; this stage was\
+    \ repo inspection and task shaping only.\npm_complexity: moderate\nplanned_effort:\
+    \ m"
+  files_changed: []
+  created_at: '2026-04-10T20:49:05+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Added a new heru-only tests_integration/ suite at the repo root with conftest.py,
+    helpers.py, README.md, __init__.py, and one real-CLI smoke file per engine adapter:
+    test_codex.py, test_claude.py, test_copilot.py, test_gemini.py, test_opencode.py,
+    and test_goz.py. The helper layer now gates on HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS,
+    skips cleanly when opt-in is unset or a binary is missing from PATH, checks provider
+    quota where heru already has quota helpers (codex, claude, copilot, goz/opencode
+    via zai), launches engines via get_engine(name) -> build_invocation(...) -> finalize_invocation(...)
+    -> subprocess.run(...), and asserts the expected reply token appears in the adapter-rendered
+    transcript. Resume coverage was added for every engine that supports it: codex/claude/copilot/gemini/opencode
+    use unified latest-session continue via LATEST_CONTINUATION_SENTINEL, and goz
+    uses explicit resume by captured continuation/session id. Updated tests_integration/README.md
+    to document the tests/ vs tests_integration/ split, HERU_INTEGRATION_ENGINES,
+    HERU_INTEGRATION_TIMEOUT_SECONDS, skip behavior, and the expected local proof
+    command HERU_INTEGRATION_ENGINES=codex uv run pytest tests_integration/test_codex.py
+    -q. Updated CLAUDE.md to document the default fixture-only tests/ suite versus
+    the opt-in real-binary tests_integration/ suite. Registered the pytest integration
+    marker in pyproject.toml. Verification run in this worktree: python -m compileall
+    tests_integration heru succeeded; uv run pytest tests/ -q passed (234 passed);
+    uv run pytest tests_integration/test_codex.py -q skipped cleanly with HERU_INTEGRATION_ENGINES
+    unset (2 skipped); uv run pytest tests_integration/test_claude.py -q skipped cleanly
+    with HERU_INTEGRATION_ENGINES unset (2 skipped); uv run pytest tests_integration/test_goz.py
+    -q skipped cleanly with HERU_INTEGRATION_ENGINES unset (2 skipped); rg -n "from
+    litehive|import litehive|LITEHIVE_" tests_integration returned no matches; downstream
+    litehive contract smoke tests still passed from ~/git/litehive: uv run pytest
+    tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+    tests/test_codex_quota.py -q -> 197 passed. I did not run a real opted-in engine
+    command in this environment because HERU_INTEGRATION_ENGINES was intentionally
+    left unset; the README now documents the expected local command for a machine
+    with codex installed and authenticated.'
+  files_changed: []
+  created_at: '2026-04-10T20:54:12+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Verified the new heru-only real-engine integration suite and its contract
+    boundaries. Repo inspection confirmed tests_integration/ exists at the repo root
+    with conftest.py, helpers.py, README.md, and per-engine files for codex/claude/copilot/gemini/opencode/goz;
+    rg found zero ''from litehive'', ''import litehive'', or ''LITEHIVE_'' references
+    under tests_integration/. Helper wiring uses the public adapter seam (get_engine
+    -> build_invocation -> finalize_invocation -> subprocess.run -> render_transcript)
+    and honors HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS. Resume
+    coverage is present for codex/claude/copilot/gemini/opencode via latest-session
+    continue and for goz via resume-by-id. CLAUDE.md documents the tests/ vs tests_integration/
+    split, and tests_integration/README.md documents opt-in execution, timeouts, skip
+    behavior, and the expected focused command HERU_INTEGRATION_ENGINES=codex uv run
+    pytest tests_integration/test_codex.py -q. Verification run: uv run pytest tests/
+    -q -> 234 passed; uv run pytest tests_integration/test_codex.py -q with HERU_INTEGRATION_ENGINES
+    unset -> 2 skipped; uv run pytest tests_integration/test_goz.py -q with HERU_INTEGRATION_ENGINES
+    unset -> 2 skipped; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q -> 197 passed. I did not run a real authenticated engine smoke in this environment
+    because HERU_INTEGRATION_ENGINES was intentionally unset and engine availability/quota
+    are machine-specific external dependencies, but the required local proof command
+    is documented and the opt-in gating behaves correctly.'
+  files_changed: []
+  created_at: '2026-04-10T20:55:56+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. I verified the repo now has tests_integration/ at the root with
+    conftest.py, helpers.py, README.md, __init__.py, and one per-engine file for codex,
+    claude, copilot, gemini, opencode, and goz. Repo inspection confirmed the new
+    suite has zero litehive coupling: ripgrep found no ''from litehive'', ''import
+    litehive'', or ''LITEHIVE_'' references under tests_integration/. The helper layer
+    exercises the intended public adapter seam: get_engine(name) -> build_invocation(...)
+    -> finalize_invocation(...) -> subprocess.run(...) -> render_transcript(...),
+    with continuation extraction via extract_engine_continuation(...). It honors HERU_INTEGRATION_ENGINES
+    and HERU_INTEGRATION_TIMEOUT_SECONDS, skips when opt-in is unset, skips when the
+    binary is absent from PATH, and applies available quota helpers for codex, claude,
+    copilot, and zai-backed engines. Per-engine coverage matches the acceptance criteria:
+    each file has a fresh-run smoke test asserting the expected reply token appears
+    in the parsed transcript, and continuation coverage is present for engines that
+    support it. Codex, claude, copilot, gemini, and opencode use the unified latest-session
+    continue sentinel; goz uses explicit resume-by-id via captured continuation data,
+    which matches its adapter contract. Documentation is in place: tests_integration/README.md
+    explains the tests/ vs tests_integration/ split, the HERU_INTEGRATION_ENGINES
+    and HERU_INTEGRATION_TIMEOUT_SECONDS env vars, skip behavior, and the expected
+    local proof command ''HERU_INTEGRATION_ENGINES=codex uv run pytest tests_integration/test_codex.py
+    -q''. CLAUDE.md now documents the default fixture-only tests/ suite versus the
+    opt-in real-binary tests_integration/ suite. Validation I reran in this review:
+    ''uv run pytest tests/ -q'' -> 234 passed; ''uv run pytest tests_integration/test_codex.py
+    -q'' with HERU_INTEGRATION_ENGINES unset -> 2 skipped; ''cd ~/git/litehive &&
+    uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q'' -> 197 passed. I also inspected
+    helpers.py and the per-engine files directly to confirm the skip logic, subprocess
+    launch path, and continuation assertions. I did not run an opted-in authenticated
+    real-engine smoke in this environment because HERU_INTEGRATION_ENGINES remained
+    intentionally unset and engine availability/quota are machine-specific, but the
+    required focused command is documented and the opt-in gating behaves correctly.
+    Acceptance criteria are satisfied.'
+  files_changed: []
+  created_at: '2026-04-10T20:57:01+00:00'

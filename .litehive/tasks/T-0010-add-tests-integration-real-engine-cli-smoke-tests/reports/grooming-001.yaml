@@ -1,0 +1,92 @@
+task_id: T-0010
+step: grooming
+verdict: pass
+source: agent
+summary: 'Inspected the heru repo, the existing adapter surface, current unit tests,
+  and litehive''s real-binary integration-test patterns. No code changes made in grooming.
+  Verified the task is correctly scoped as heru-only adapter testing work: there is
+  currently no tests_integration/ directory in this repo; the relevant implementation
+  seam is heru.get_engine(name) -> adapter.build_invocation(...) -> adapter.finalize_invocation(...)
+  -> subprocess.run(...) -> adapter.render_transcript(...) / heru stream readers /
+  extract_engine_continuation(...). Verified current adapter resume behavior: codex,
+  claude, copilot, gemini, and opencode support latest-session continue; goz supports
+  explicit --resume-session only and must reject unified latest-session continue.
+  Verified relevant skip/quota seams already exist in heru/quota/ for codex, claude,
+  copilot, and z.ai-backed engines (opencode/goz), with gemini having no dedicated
+  quota helper today. Verified docs currently mention tests/ and tests/contract/,
+  but not the required tests/ vs tests_integration/ split.'
+feedback: "Inspected the heru repo, the existing adapter surface, current unit tests,\
+  \ and litehive's real-binary integration-test patterns. No code changes made in\
+  \ grooming. Verified the task is correctly scoped as heru-only adapter testing work:\
+  \ there is currently no tests_integration/ directory in this repo; the relevant\
+  \ implementation seam is heru.get_engine(name) -> adapter.build_invocation(...)\
+  \ -> adapter.finalize_invocation(...) -> subprocess.run(...) -> adapter.render_transcript(...)\
+  \ / heru stream readers / extract_engine_continuation(...). Verified current adapter\
+  \ resume behavior: codex, claude, copilot, gemini, and opencode support latest-session\
+  \ continue; goz supports explicit --resume-session only and must reject unified\
+  \ latest-session continue. Verified relevant skip/quota seams already exist in heru/quota/\
+  \ for codex, claude, copilot, and z.ai-backed engines (opencode/goz), with gemini\
+  \ having no dedicated quota helper today. Verified docs currently mention tests/\
+  \ and tests/contract/, but not the required tests/ vs tests_integration/ split.\n\
+  \nExecution plan for implementing: 1. Create tests_integration/conftest.py, helpers.py,\
+  \ README.md, and one test_<engine>.py per adapter. Keep the helper layer heru-only:\
+  \ env parsing via HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS,\
+  \ PATH availability checks via adapter.is_available(), subprocess execution through\
+  \ build_invocation/finalize_invocation/subprocess.run, transcript assertion through\
+  \ adapter.render_transcript or shared stream-reader helpers, and per-engine quota\
+  \ skip hooks using heru/quota/. 2. Port only the reusable shape from ~/git/litehive/tests_integration/helpers.py\
+  \ and the per-engine files; do not copy any litehive task/report/nudge/config/workspace\
+  \ machinery. 3. Add one fresh-run smoke test per engine that prompts for an exact\
+  \ short reply and asserts the parsed transcript contains that reply text. 4. Add\
+  \ continuation coverage tied to T-0003: use a first real run to capture continuation/session/thread\
+  \ id from heru output, then a second run that exercises unified resume behavior.\
+  \ For codex/claude/copilot/gemini/opencode this should cover latest-session continue/native\
+  \ continue where practical; for goz it should explicitly cover resume by captured\
+  \ id via --resume-session semantics, not latest-session continue. 5. Document the\
+  \ split in tests_integration/README.md and CLAUDE.md, including that tests/ remains\
+  \ fixture-only and default, while tests_integration/ is opt-in, requires installed\
+  \ CLIs, and is not CI-required. 6. Verification expected in later stages: uv run\
+  \ pytest tests/ with HERU_INTEGRATION_ENGINES unset; a focused opted-in integration\
+  \ run such as HERU_INTEGRATION_ENGINES=codex uv run pytest tests_integration/test_codex.py\
+  \ -q on a machine with codex installed; then the required litehive contract smoke\
+  \ suite from ~/git/litehive.\n\nTASK_UPDATE:\nplan:\n  - Audit the six adapters'\
+  \ invocation, transcript, continuation, and quota seams before copying any litehive\
+  \ test helper structure.\n  - Build a small heru-only integration helper layer under\
+  \ tests_integration/ that centralizes env gating, PATH/quota skips, subprocess execution,\
+  \ transcript extraction, and continuation capture.\n  - Add one fresh-run smoke\
+  \ test per engine adapter.\n  - Add continuation smoke coverage per engine resume\
+  \ capability: latest-session continue for codex/claude/copilot/gemini/opencode,\
+  \ explicit-id resume for goz.\n  - Update tests_integration/README.md and CLAUDE.md\
+  \ to document opt-in execution and the tests/ vs tests_integration/ split.\nadapter_surface:\n\
+  \  entrypoint: heru.get_engine(name) returning the public adapter, then build_invocation/finalize_invocation/subprocess.run/render_transcript/extract_engine_continuation\n\
+  \  inputs: prompt, cwd, model where applicable, resume_session_id, HERU_INTEGRATION_ENGINES,\
+  \ HERU_INTEGRATION_TIMEOUT_SECONDS\n  outputs: parsed transcript text and captured\
+  \ continuation/session identifier from real engine stdout/stderr\nconfig_and_execution_path:\n\
+  \  - Keep provider-specific CLI flags inside each adapter; tests should call the\
+  \ public adapter API rather than reconstruct argv.\n  - Skip gating should happen\
+  \ before launch when env opt-in is missing, binary is absent, or quota helper reports\
+  \ a block condition.\n  - Do not introduce litehive imports, workspace setup, task\
+  \ lifecycle flows, or report/nudge assertions into heru integration tests.\nverification_evidence:\n\
+  \  - No tests run in grooming; this stage was repo inspection and task shaping only.\n\
+  pm_complexity: moderate\nplanned_effort: m"
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 107
+hook_results: []
+created_at: '2026-04-10T20:49:12+00:00'

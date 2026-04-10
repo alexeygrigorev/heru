@@ -1,0 +1,65 @@
+task_id: T-0010
+step: testing
+verdict: pass
+source: agent
+summary: 'Verified the new heru-only real-engine integration suite and its contract
+  boundaries. Repo inspection confirmed tests_integration/ exists at the repo root
+  with conftest.py, helpers.py, README.md, and per-engine files for codex/claude/copilot/gemini/opencode/goz;
+  rg found zero ''from litehive'', ''import litehive'', or ''LITEHIVE_'' references
+  under tests_integration/. Helper wiring uses the public adapter seam (get_engine
+  -> build_invocation -> finalize_invocation -> subprocess.run -> render_transcript)
+  and honors HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS. Resume
+  coverage is present for codex/claude/copilot/gemini/opencode via latest-session
+  continue and for goz via resume-by-id. CLAUDE.md documents the tests/ vs tests_integration/
+  split, and tests_integration/README.md documents opt-in execution, timeouts, skip
+  behavior, and the expected focused command HERU_INTEGRATION_ENGINES=codex uv run
+  pytest tests_integration/test_codex.py -q. Verification run: uv run pytest tests/
+  -q -> 234 passed; uv run pytest tests_integration/test_codex.py -q with HERU_INTEGRATION_ENGINES
+  unset -> 2 skipped; uv run pytest tests_integration/test_goz.py -q with HERU_INTEGRATION_ENGINES
+  unset -> 2 skipped; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q -> 197 passed. I did not run a real authenticated engine smoke in this environment
+  because HERU_INTEGRATION_ENGINES was intentionally unset and engine availability/quota
+  are machine-specific external dependencies, but the required local proof command
+  is documented and the opt-in gating behaves correctly.'
+feedback: 'Verified the new heru-only real-engine integration suite and its contract
+  boundaries. Repo inspection confirmed tests_integration/ exists at the repo root
+  with conftest.py, helpers.py, README.md, and per-engine files for codex/claude/copilot/gemini/opencode/goz;
+  rg found zero ''from litehive'', ''import litehive'', or ''LITEHIVE_'' references
+  under tests_integration/. Helper wiring uses the public adapter seam (get_engine
+  -> build_invocation -> finalize_invocation -> subprocess.run -> render_transcript)
+  and honors HERU_INTEGRATION_ENGINES and HERU_INTEGRATION_TIMEOUT_SECONDS. Resume
+  coverage is present for codex/claude/copilot/gemini/opencode via latest-session
+  continue and for goz via resume-by-id. CLAUDE.md documents the tests/ vs tests_integration/
+  split, and tests_integration/README.md documents opt-in execution, timeouts, skip
+  behavior, and the expected focused command HERU_INTEGRATION_ENGINES=codex uv run
+  pytest tests_integration/test_codex.py -q. Verification run: uv run pytest tests/
+  -q -> 234 passed; uv run pytest tests_integration/test_codex.py -q with HERU_INTEGRATION_ENGINES
+  unset -> 2 skipped; uv run pytest tests_integration/test_goz.py -q with HERU_INTEGRATION_ENGINES
+  unset -> 2 skipped; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q -> 197 passed. I did not run a real authenticated engine smoke in this environment
+  because HERU_INTEGRATION_ENGINES was intentionally unset and engine availability/quota
+  are machine-specific external dependencies, but the required local proof command
+  is documented and the opt-in gating behaves correctly.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 105
+hook_results: []
+created_at: '2026-04-10T20:56:11+00:00'

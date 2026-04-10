@@ -1,0 +1,74 @@
+id: T-0012
+slug: add-heru-usage-cli-subcommand-show-usage-for-all
+title: 'Add ''heru usage'' CLI subcommand: show usage for all or one engine'
+depends_on: []
+task_type: adapter
+model: null
+mode: tasks
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: medium
+pm_complexity: simple
+planned_effort: s
+created_at: '2026-04-10T20:50:13+00:00'
+updated_at: '2026-04-10T20:50:13+00:00'
+goal: "Add a new CLI subcommand to heru: 'heru usage' prints usage/quota status for\
+  \ every registered provider (codex, claude, copilot, zai which covers opencode+goz),\
+  \ and 'heru usage <name>' prints it for one. Build on the existing heru/quota/ Python\
+  \ API (check_codex_quota, check_claude_quota, check_copilot_quota, check_zai_quota,\
+  \ and the matching *_block_reason helpers \u2014 keep the internal module name 'quota'\
+  \ since that's what the provider APIs call it; only the CLI verb is 'usage'). Output\
+  \ should be human-readable by default \u2014 one line per provider showing used/limit/remaining/unit,\
+  \ reset window, and a clear indicator when a block_reason is active. Add a --json\
+  \ flag for machine-readable output. Handle providers with no usage endpoint (gemini)\
+  \ by printing 'unsupported' rather than erroring. Handle auth failures (missing\
+  \ token) by printing the provider-specific reason rather than crashing. Add fixture-driven\
+  \ tests under tests/ that mock each provider's check_* function; do not hit any\
+  \ real network. Update README to document the new subcommand."
+acceptance_criteria:
+- '''heru usage'' (no args) prints one line per supported provider: codex, claude,
+  copilot, zai'
+- '''heru usage codex'' / ''heru usage claude'' / ''heru usage copilot'' / ''heru
+  usage zai'' each prints usage for that single provider'
+- '''heru usage gemini'' prints an ''unsupported'' notice rather than crashing'
+- '''heru usage <unknown>'' prints a helpful error listing valid provider names and
+  exits non-zero'
+- Output includes used, limit, remaining, unit, reset window, and active block_reason
+  if any
+- --json flag emits machine-readable output (one JSON object per provider, or a single
+  object for the single-provider form)
+- Missing auth / missing credential file is reported per-provider, not as a crash
+- "Fixture-driven tests under tests/ cover success, unsupported, unknown-name, missing-auth,\
+  \ and --json paths \u2014 zero real network calls"
+- README documents 'heru usage' and 'heru usage <name>'
+- heru/quota/ module name is unchanged (internal naming stays consistent with provider
+  APIs)
+- uv run pytest tests/ passes
+- litehive contract tests from ~/git/litehive still pass
+constraints:
+- Keep provider-specific behavior isolated to the adapter boundary.
+- Preserve deterministic workspace state and execution flow.
+plan:
+- Inspect the existing adapter interface, config wiring, and invocation flow.
+- Implement the adapter change close to the integration seam.
+- Verify the adapter path with a focused test or representative run.
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0012 add-heru-usage-cli-subcommand-show-usage-for-all'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null
