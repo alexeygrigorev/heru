@@ -1,0 +1,79 @@
+task_id: T-0001
+step: implementing
+verdict: pass
+source: agent
+summary: 'Implemented unified JSONL event output across heru. Added public UnifiedEvent
+  support in heru/types.py and exported it, extended the base adapter stream contract
+  with continuation extraction plus native-payload translation/render_unified_output
+  helpers, and added emit_unified handling to ExternalCLIAdapter.run/run_live. The
+  CLI now defaults to unified output and accepts --raw to keep native passthrough.
+  Each engine adapter now exposes translate_native_event(), codex overrides native
+  payload iteration for multiline objects, and stream adapters emit continuation ids
+  where available. README now documents the unified event envelope and default/--raw
+  behavior. Added focused adapter translation coverage in tests/test_unified_events.py
+  plus CLI coverage for unified default vs --raw in tests/test_heru_cli.py. Verified
+  with: uv run python -m pytest -q tests/test_unified_events.py tests/test_heru_cli.py
+  tests/test_goz_adapter.py (16 passed), uv run python -m pytest -q (34 passed), and
+  the required Litehive contract smoke suite from ~/git/litehive: uv run python -m
+  pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py (197 passed). Acceptance evidence:
+  all supported engines now translate native payloads into a unified envelope with
+  raw preserved, CLI default output is unified JSONL with --raw escape hatch, per-adapter
+  tests assert representative mappings, and docs describe the schema.'
+feedback: 'Implemented unified JSONL event output across heru. Added public UnifiedEvent
+  support in heru/types.py and exported it, extended the base adapter stream contract
+  with continuation extraction plus native-payload translation/render_unified_output
+  helpers, and added emit_unified handling to ExternalCLIAdapter.run/run_live. The
+  CLI now defaults to unified output and accepts --raw to keep native passthrough.
+  Each engine adapter now exposes translate_native_event(), codex overrides native
+  payload iteration for multiline objects, and stream adapters emit continuation ids
+  where available. README now documents the unified event envelope and default/--raw
+  behavior. Added focused adapter translation coverage in tests/test_unified_events.py
+  plus CLI coverage for unified default vs --raw in tests/test_heru_cli.py. Verified
+  with: uv run python -m pytest -q tests/test_unified_events.py tests/test_heru_cli.py
+  tests/test_goz_adapter.py (16 passed), uv run python -m pytest -q (34 passed), and
+  the required Litehive contract smoke suite from ~/git/litehive: uv run python -m
+  pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py (197 passed). Acceptance evidence:
+  all supported engines now translate native payloads into a unified envelope with
+  raw preserved, CLI default output is unified JSONL with --raw escape hatch, per-adapter
+  tests assert representative mappings, and docs describe the schema.'
+submitted_via_cli: true
+files_changed:
+- README.md
+- heru/__init__.py
+- heru/adapters/_claude_impl.py
+- heru/adapters/_codex_impl.py
+- heru/adapters/_gemini_impl.py
+- heru/adapters/_goz_impl.py
+- heru/adapters/_opencode_impl.py
+- heru/adapters/claude.py
+- heru/adapters/codex.py
+- heru/adapters/copilot.py
+- heru/adapters/gemini.py
+- heru/adapters/goz.py
+- heru/adapters/opencode.py
+- heru/base.py
+- heru/main.py
+- heru/types.py
+- tests/test_heru_cli.py
+- tests/test_unified_events.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 440
+hook_results: []
+created_at: '2026-04-10T19:09:47+00:00'

@@ -1,0 +1,135 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Verified by repo inspection only; no code changes and no tests run in\
+    \ grooming. Current state: `heru.main` forwards `execution.stdout` verbatim, `ExternalCLIAdapter.run`\
+    \ only returns native stdout/stderr, and each adapter already exposes engine-specific\
+    \ `stream_event_adapter()` hooks that normalize native payloads into internal\
+    \ `LiveEvent` values for timeline extraction. README also still marks unified\
+    \ JSONL output as not yet done. This confirms the problem statement and shows\
+    \ the narrowest implementation path is to promote that existing normalization\
+    \ layer into the public streamed contract rather than build a second event-mapping\
+    \ stack.\n\nImplementation plan:\n1. Add a public unified streamed event model\
+    \ in `heru/types.py` and export it from `heru/__init__.py`. Prefer extending/reusing\
+    \ the existing `LiveEvent` shape or clearly replacing it, because adding a second\
+    \ overlapping public event model would create unnecessary semver surface.\n2.\
+    \ Add a public per-adapter translation hook on `ExternalCLIAdapter` / adapters\
+    \ that converts one native payload into zero or one unified event envelope, preserving\
+    \ the original payload under `raw` and emitting continuation/usage/status events\
+    \ where present.\n3. Add an `emit_unified` path in `ExternalCLIAdapter.run` and\
+    \ `run_live` that rewrites JSONL stdout into unified JSONL while leaving `--raw`\
+    \ passthrough available for debugging. Codex needs special handling because its\
+    \ payload parser accepts multiline JSON objects rather than strict one-line JSONL.\n\
+    4. Update `heru.main` so unified output is the default CLI behavior and `--raw`\
+    \ disables translation.\n5. Add focused adapter tests with fixture-style native\
+    \ payload samples for codex, claude, copilot, gemini, opencode, and goz, plus\
+    \ CLI tests for default unified output vs `--raw` passthrough.\n6. Update README\
+    \ to document the public unified event schema and note that `raw` contains the\
+    \ provider-native payload.\n7. In implementing/testing stages, run targeted `uv\
+    \ run pytest` for the touched adapter/CLI tests, then the required Litehive contract\
+    \ smoke suite before finishing the task.\n\nScope notes and risks:\n- This is\
+    \ a semver-relevant public API change because it adds a new public pydantic model\
+    \ and changes default CLI/stdout behavior. Keep signatures backwards compatible\
+    \ where possible and document the behavior shift.\n- The task should stay inside\
+    \ heru. No Litehive orchestration, stage-report, or routing changes are needed.\n\
+    - Acceptance criterion wording should be interpreted as observable outcomes, not\
+    \ a mandatory internal shape. The important observable is that every engine can\
+    \ emit one documented unified JSONL envelope with native payload preserved in\
+    \ `raw`.\n\nTASK_UPDATE:\n```yaml\ngoal: Emit one documented, engine-agnostic\
+    \ JSONL event envelope from heru by default while preserving each provider payload\
+    \ under `raw` and keeping a `--raw` escape hatch for native passthrough.\nacceptance_criteria:\n\
+    \  - Running `heru --engine <engine> <prompt>` emits unified JSONL events for\
+    \ every supported engine (`codex`, `claude`, `copilot`, `gemini`, `opencode`,\
+    \ `goz`) instead of provider-native payloads by default.\n  - Each unified event\
+    \ includes the common envelope fields needed by callers to consume messages, tool\
+    \ calls, tool results, usage, errors, status, and continuation data, and preserves\
+    \ the original provider payload under `raw`.\n  - The adapter layer exposes a\
+    \ single native-payload-to-unified-event translation path per engine, and fixture-driven\
+    \ unit tests verify representative native samples for each engine map to the expected\
+    \ unified event shape.\n  - Passing `--raw` to the heru CLI restores native stdout\
+    \ passthrough without changing stderr or process exit behavior.\n  - README documents\
+    \ the unified event schema, default CLI behavior, and the purpose of the `raw`\
+    \ field.\nplan:\n  - Reuse the existing stream-event parsing logic as the basis\
+    \ for a public unified event envelope instead of introducing a second independent\
+    \ normalization stack.\n  - Add unified event emission hooks in the base adapter\
+    \ run path and expose the new schema from the public package surface.\n  - Cover\
+    \ adapter translation and CLI default/`--raw` behavior with focused pytest tests,\
+    \ then run the Litehive smoke suite before completion.\npm_complexity: moderate\n\
+    planned_effort: m\n```\n"
+  files_changed: []
+  created_at: '2026-04-10T19:02:12+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Implemented unified JSONL event output across heru. Added public UnifiedEvent
+    support in heru/types.py and exported it, extended the base adapter stream contract
+    with continuation extraction plus native-payload translation/render_unified_output
+    helpers, and added emit_unified handling to ExternalCLIAdapter.run/run_live. The
+    CLI now defaults to unified output and accepts --raw to keep native passthrough.
+    Each engine adapter now exposes translate_native_event(), codex overrides native
+    payload iteration for multiline objects, and stream adapters emit continuation
+    ids where available. README now documents the unified event envelope and default/--raw
+    behavior. Added focused adapter translation coverage in tests/test_unified_events.py
+    plus CLI coverage for unified default vs --raw in tests/test_heru_cli.py. Verified
+    with: uv run python -m pytest -q tests/test_unified_events.py tests/test_heru_cli.py
+    tests/test_goz_adapter.py (16 passed), uv run python -m pytest -q (34 passed),
+    and the required Litehive contract smoke suite from ~/git/litehive: uv run python
+    -m pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py (197 passed). Acceptance evidence:
+    all supported engines now translate native payloads into a unified envelope with
+    raw preserved, CLI default output is unified JSONL with --raw escape hatch, per-adapter
+    tests assert representative mappings, and docs describe the schema.'
+  files_changed: []
+  created_at: '2026-04-10T19:09:36+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Validated the unified JSONL event implementation against the acceptance
+    criteria. Verified the public contract in heru/types.py, heru/base.py, and heru/main.py:
+    UnifiedEvent is public, adapters translate native payloads through translate_native_event(s),
+    ExternalCLIAdapter.run/run_live support emit_unified, and CLI defaults to unified
+    output with --raw opting back into native passthrough. Reviewed representative
+    adapter hooks for codex/claude/copilot/gemini/opencode/goz and confirmed each
+    exposes the unified translation path through the shared stream adapter layer,
+    with raw payload preservation and continuation support where emitted. Ran focused
+    verification: uv run pytest -q tests/test_unified_events.py tests/test_heru_cli.py
+    tests/test_goz_adapter.py -> 16 passed. This covers per-engine fixture-style translations
+    (codex message, claude tool_call, copilot usage, gemini continuation, opencode
+    usage+continuation, goz tool_result) plus CLI default unified vs --raw behavior.
+    Ran full heru suite: uv run pytest -q -> 34 passed. Ran required Litehive contract
+    smoke from /home/alexey/git/litehive: uv run pytest -q tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -> 197 passed. Evidence supports the acceptance criteria: one documented unified
+    envelope is emitted by default, native payload is preserved under raw, adapters
+    expose translation hooks, --raw restores native passthrough, tests cover representative
+    adapter mappings, and README documents the schema/default behavior. Residual risk:
+    adapter tests are representative rather than exhaustive for every native event
+    variant, but there is no failing evidence and the cross-repo contract suite stayed
+    green.'
+  files_changed: []
+  created_at: '2026-04-10T19:11:34+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. Verified the implementation against the task criteria in code
+    and by running the required tests. Confirmed a public UnifiedEvent model exists
+    in heru/types.py and is exported from heru/__init__.py; it carries the common
+    envelope fields including kind, engine, sequence, timestamp, role, content, tool_name,
+    tool_input, tool_output, error, usage_delta, continuation_id, raw, and metadata.
+    Confirmed ExternalCLIAdapter.run and run_live both accept emit_unified and route
+    stdout through render_unified_output when enabled, while heru/main.py now defaults
+    CLI output to unified JSONL and preserves native passthrough behind --raw. Confirmed
+    each supported adapter exposes the translation hook path through translate_native_event/translate_native_events
+    and the shared stream adapter layer, with codex using iter_codex_payloads for
+    multiline native objects and continuation ids preserved where emitted. Reviewed
+    README.md and confirmed it documents the unified event schema, default unified
+    behavior, and --raw fallback. Verification run: uv run pytest -q tests/test_unified_events.py
+    tests/test_heru_cli.py tests/test_goz_adapter.py -> 16 passed; uv run pytest -q
+    -> 34 passed; from /home/alexey/git/litehive, uv run pytest -q tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -> 197 passed. This is sufficient evidence that the requested unified JSONL envelope
+    is emitted by default across engines, native payloads are preserved under raw,
+    representative per-adapter translations are covered by tests, and Litehive contract
+    behavior remains green.'
+  files_changed: []
+  created_at: '2026-04-10T19:13:28+00:00'

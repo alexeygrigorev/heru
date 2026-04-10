@@ -1,0 +1,67 @@
+task_id: T-0001
+step: testing
+verdict: pass
+source: agent
+summary: 'Validated the unified JSONL event implementation against the acceptance
+  criteria. Verified the public contract in heru/types.py, heru/base.py, and heru/main.py:
+  UnifiedEvent is public, adapters translate native payloads through translate_native_event(s),
+  ExternalCLIAdapter.run/run_live support emit_unified, and CLI defaults to unified
+  output with --raw opting back into native passthrough. Reviewed representative adapter
+  hooks for codex/claude/copilot/gemini/opencode/goz and confirmed each exposes the
+  unified translation path through the shared stream adapter layer, with raw payload
+  preservation and continuation support where emitted. Ran focused verification: uv
+  run pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py
+  -> 16 passed. This covers per-engine fixture-style translations (codex message,
+  claude tool_call, copilot usage, gemini continuation, opencode usage+continuation,
+  goz tool_result) plus CLI default unified vs --raw behavior. Ran full heru suite:
+  uv run pytest -q -> 34 passed. Ran required Litehive contract smoke from /home/alexey/git/litehive:
+  uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -> 197 passed. Evidence supports
+  the acceptance criteria: one documented unified envelope is emitted by default,
+  native payload is preserved under raw, adapters expose translation hooks, --raw
+  restores native passthrough, tests cover representative adapter mappings, and README
+  documents the schema/default behavior. Residual risk: adapter tests are representative
+  rather than exhaustive for every native event variant, but there is no failing evidence
+  and the cross-repo contract suite stayed green.'
+feedback: 'Validated the unified JSONL event implementation against the acceptance
+  criteria. Verified the public contract in heru/types.py, heru/base.py, and heru/main.py:
+  UnifiedEvent is public, adapters translate native payloads through translate_native_event(s),
+  ExternalCLIAdapter.run/run_live support emit_unified, and CLI defaults to unified
+  output with --raw opting back into native passthrough. Reviewed representative adapter
+  hooks for codex/claude/copilot/gemini/opencode/goz and confirmed each exposes the
+  unified translation path through the shared stream adapter layer, with raw payload
+  preservation and continuation support where emitted. Ran focused verification: uv
+  run pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py
+  -> 16 passed. This covers per-engine fixture-style translations (codex message,
+  claude tool_call, copilot usage, gemini continuation, opencode usage+continuation,
+  goz tool_result) plus CLI default unified vs --raw behavior. Ran full heru suite:
+  uv run pytest -q -> 34 passed. Ran required Litehive contract smoke from /home/alexey/git/litehive:
+  uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -> 197 passed. Evidence supports
+  the acceptance criteria: one documented unified envelope is emitted by default,
+  native payload is preserved under raw, adapters expose translation hooks, --raw
+  restores native passthrough, tests cover representative adapter mappings, and README
+  documents the schema/default behavior. Residual risk: adapter tests are representative
+  rather than exhaustive for every native event variant, but there is no failing evidence
+  and the cross-repo contract suite stayed green.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 115
+hook_results: []
+created_at: '2026-04-10T19:11:42+00:00'

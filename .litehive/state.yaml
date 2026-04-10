@@ -1,8 +1,7 @@
-active_task_id: null
+active_task_id: T-0001
 active_task_ids: []
 mode: implementation
 queue:
-- T-0001
 - T-0002
 - T-0003
 - T-0004

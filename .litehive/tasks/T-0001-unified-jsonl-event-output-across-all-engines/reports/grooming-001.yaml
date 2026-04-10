@@ -1,0 +1,86 @@
+task_id: T-0001
+step: grooming
+verdict: pass
+source: agent
+summary: 'Verified by repo inspection only; no code changes and no tests run in grooming.
+  Current state: `heru.main` forwards `execution.stdout` verbatim, `ExternalCLIAdapter.run`
+  only returns native stdout/stderr, and each adapter already exposes engine-specific
+  `stream_event_adapter()` hooks that normalize native payloads into internal `LiveEvent`
+  values for timeline extraction. README also still marks unified JSONL output as
+  not yet done. This confirms the problem statement and shows the narrowest implementation
+  path is to promote that existing normalization layer into the public streamed contract
+  rather than build a second event-mapping stack.'
+feedback: "Verified by repo inspection only; no code changes and no tests run in grooming.\
+  \ Current state: `heru.main` forwards `execution.stdout` verbatim, `ExternalCLIAdapter.run`\
+  \ only returns native stdout/stderr, and each adapter already exposes engine-specific\
+  \ `stream_event_adapter()` hooks that normalize native payloads into internal `LiveEvent`\
+  \ values for timeline extraction. README also still marks unified JSONL output as\
+  \ not yet done. This confirms the problem statement and shows the narrowest implementation\
+  \ path is to promote that existing normalization layer into the public streamed\
+  \ contract rather than build a second event-mapping stack.\n\nImplementation plan:\n\
+  1. Add a public unified streamed event model in `heru/types.py` and export it from\
+  \ `heru/__init__.py`. Prefer extending/reusing the existing `LiveEvent` shape or\
+  \ clearly replacing it, because adding a second overlapping public event model would\
+  \ create unnecessary semver surface.\n2. Add a public per-adapter translation hook\
+  \ on `ExternalCLIAdapter` / adapters that converts one native payload into zero\
+  \ or one unified event envelope, preserving the original payload under `raw` and\
+  \ emitting continuation/usage/status events where present.\n3. Add an `emit_unified`\
+  \ path in `ExternalCLIAdapter.run` and `run_live` that rewrites JSONL stdout into\
+  \ unified JSONL while leaving `--raw` passthrough available for debugging. Codex\
+  \ needs special handling because its payload parser accepts multiline JSON objects\
+  \ rather than strict one-line JSONL.\n4. Update `heru.main` so unified output is\
+  \ the default CLI behavior and `--raw` disables translation.\n5. Add focused adapter\
+  \ tests with fixture-style native payload samples for codex, claude, copilot, gemini,\
+  \ opencode, and goz, plus CLI tests for default unified output vs `--raw` passthrough.\n\
+  6. Update README to document the public unified event schema and note that `raw`\
+  \ contains the provider-native payload.\n7. In implementing/testing stages, run\
+  \ targeted `uv run pytest` for the touched adapter/CLI tests, then the required\
+  \ Litehive contract smoke suite before finishing the task.\n\nScope notes and risks:\n\
+  - This is a semver-relevant public API change because it adds a new public pydantic\
+  \ model and changes default CLI/stdout behavior. Keep signatures backwards compatible\
+  \ where possible and document the behavior shift.\n- The task should stay inside\
+  \ heru. No Litehive orchestration, stage-report, or routing changes are needed.\n\
+  - Acceptance criterion wording should be interpreted as observable outcomes, not\
+  \ a mandatory internal shape. The important observable is that every engine can\
+  \ emit one documented unified JSONL envelope with native payload preserved in `raw`.\n\
+  \nTASK_UPDATE:\n```yaml\ngoal: Emit one documented, engine-agnostic JSONL event\
+  \ envelope from heru by default while preserving each provider payload under `raw`\
+  \ and keeping a `--raw` escape hatch for native passthrough.\nacceptance_criteria:\n\
+  \  - Running `heru --engine <engine> <prompt>` emits unified JSONL events for every\
+  \ supported engine (`codex`, `claude`, `copilot`, `gemini`, `opencode`, `goz`) instead\
+  \ of provider-native payloads by default.\n  - Each unified event includes the common\
+  \ envelope fields needed by callers to consume messages, tool calls, tool results,\
+  \ usage, errors, status, and continuation data, and preserves the original provider\
+  \ payload under `raw`.\n  - The adapter layer exposes a single native-payload-to-unified-event\
+  \ translation path per engine, and fixture-driven unit tests verify representative\
+  \ native samples for each engine map to the expected unified event shape.\n  - Passing\
+  \ `--raw` to the heru CLI restores native stdout passthrough without changing stderr\
+  \ or process exit behavior.\n  - README documents the unified event schema, default\
+  \ CLI behavior, and the purpose of the `raw` field.\nplan:\n  - Reuse the existing\
+  \ stream-event parsing logic as the basis for a public unified event envelope instead\
+  \ of introducing a second independent normalization stack.\n  - Add unified event\
+  \ emission hooks in the base adapter run path and expose the new schema from the\
+  \ public package surface.\n  - Cover adapter translation and CLI default/`--raw`\
+  \ behavior with focused pytest tests, then run the Litehive smoke suite before completion.\n\
+  pm_complexity: moderate\nplanned_effort: m\n```\n"
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 123
+hook_results: []
+created_at: '2026-04-10T19:02:27+00:00'

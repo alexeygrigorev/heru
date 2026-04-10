@@ -1,0 +1,354 @@
+Task: T-0001 Unified JSONL event output across all engines
+Stage: accepting
+Stage owner: reviewer
+Process profile: Python
+Task type: -
+
+Workspace context:
+# heru — Litehive Workspace Context
+
+Process profile: Python
+
+You are editing **heru**, a unified headless CLI for coding agents
+(codex, claude, copilot, gemini, opencode, goz). Read this whole file
+before touching any file in this repository.
+
+## Project
+
+- **Purpose:** a thin adapter layer that wraps each supported agent CLI
+  behind a uniform Python interface, with a unified `heru <engine>
+  <prompt>` command, one JSONL event schema across engines, and one
+  resume mechanism. heru is the engine-I/O layer; it knows nothing
+  about task queues, stages, orchestration, or sandboxing — those are
+  litehive concerns.
+- **Main package:** `heru/` (at the repo root, below `.git/`). Public
+  API lives in `heru/__init__.py`, `heru/base.py`, `heru/types.py`,
+  and each `heru/adapters/<engine>.py`. Anything prefixed with `_` is
+  internal.
+- **Commands to know:**
+  - `uv sync --extra dev` — install heru's own venv
+  - `uv run pytest` — heru's standalone test suite
+  - `uv run heru <engine> <prompt>` — the CLI (WIP per task T-0002)
+  - `cd ~/git/litehive && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py` — **litehive contract smoke tests; run before every commit**
+
+## Directory layout
+
+```
+heru/
+├── heru/                  # the Python package
+│   ├── __init__.py        # get_engine, ENGINE_CHOICES — PUBLIC
+│   ├── base.py            # ExternalCLIAdapter, CLIInvocation, run_live — PUBLIC
+│   ├── types.py           # shared pydantic types — PUBLIC
+│   ├── main.py            # `heru <engine> <prompt>` CLI entry — PUBLIC
+│   ├── _engine_detection.py   # internal
+│   ├── _continuation.py       # internal
+│   ├── adapters/
+│   │   ├── codex.py, _codex_impl.py         # CodexCLIAdapter PUBLIC, _impl internal
+│   │   ├── claude.py, _claude_impl.py
+│   │   ├── copilot.py, _copilot_impl.py
+│   │   ├── gemini.py, _gemini_impl.py
+│   │   ├── opencode.py, _opencode_impl.py
+│   │   ├── goz.py, _goz_impl.py
+│   │   └── common.py      # shared helpers
+│   └── quota/             # per-provider quota check helpers — PUBLIC
+├── tests/                 # heru's standalone unit tests (no litehive imports)
+├── pyproject.toml
+├── README.md
+└── .litehive/             # this workspace (tasks, state)
+```
+
+## Public API surface — do not break without a semver bump
+
+Anything **not** prefixed with `_` is public. Changing the signature,
+return type, or behavior of any of the following is a **semver-major**
+breaking change that requires a version bump in `pyproject.toml`, a
+CHANGELOG entry, and a migration note for litehive:
+
+- `heru.get_engine(name)`, `heru.ENGINE_CHOICES`
+- `heru.base.ExternalCLIAdapter` (subclass, don't modify shape)
+- `heru.base.CLIInvocation`, `heru.base.CLIExecutionResult`
+- Each adapter class: `CodexCLIAdapter`, `ClaudeCLIAdapter`,
+  `CopilotCLIAdapter`, `GeminiCLIAdapter`, `OpencodeCLIAdapter`,
+  `GozCLIAdapter`
+- Every pydantic model in `heru/types.py`
+- `heru.main.main` (the CLI entry)
+
+**Internal** (change freely, no semver implications): every
+`_`-prefixed module, every private method on public classes, and the
+exact text of rendered transcripts.
+
+## Hard rules — do NOT break these
+
+1. **No imports from `litehive`.** heru is a leaf package. One runtime
+   dep: `pydantic`. If your diff adds `from litehive …`, stop — the
+   code belongs in litehive, not heru.
+
+2. **Do not break litehive.** litehive depends on heru via an editable
+   path install, so every heru change propagates immediately. Before
+   you finish any stage that touched code, you MUST run:
+   ```
+   cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py \
+       tests/test_engine_variants_and_timeline.py \
+       tests/test_heru_cli.py tests/test_codex_quota.py -q
+   ```
+   If any fail, your change broke the contract. Either fix heru to
+   preserve the contract, or explicitly call out the breakage in your
+   stage report with a proposed litehive-side migration.
+
+3. **Stage reports are a litehive concept, not heru's.** `StageReport`,
+   `StageResultSubmission`, `StageResultTests`, and `TaskUpdateSubmission`
+   currently live in `heru/types.py` as a temporary compromise — they
+   are slated to move to litehive. Do not add new stage-report logic
+   or fields inside heru. If your task requires you to edit stage
+   report semantics, flag it back: it is misfiled and belongs in
+   litehive.
+
+4. **Tests must be standalone.** No test under `tests/` may import
+   from `litehive`. Every heru test must run in a fresh venv with
+   only `heru + pydantic + pytest` installed. For JSONL fixtures,
+   hand-craft strings or files under `tests/fixtures/` — do NOT
+   shell out to real engine CLIs during tests.
+
+5. **Respect the contract tests** (once `tests/contract/` exists per
+   T-0007). Changing an assertion in `tests/contract/` is by
+   definition a breaking change and requires the full semver
+   checklist.
+
+6. **Every new adapter needs both a public class AND a `_impl` helper
+   module.** Shape: `adapters/<engine>.py` for the public class,
+   `adapters/_<engine>_impl.py` for parsing/quota internals. Keep the
+   symmetry — the base class expects it.
+
+## Before you write code — ask yourself
+
+- **Is this a heru concern or a litehive concern?** If you need task
+  queues, retries, worktrees, commit pipelines, sandbox profiles, or
+  the `STAGE_RESULT:` agent protocol, this is probably litehive.
+  Stop and surface the concern in grooming.
+- **Does this change the public API?** If yes, note the intended
+  semver bump in your report and explicitly list what litehive needs
+  to update.
+- **Can I write this as a fixture-driven unit test?** If not, your
+  code is probably too coupled to the real CLI subprocess — refactor
+  to take parsed inputs.
+- **Have I run the litehive contract tests?** If not, the task is not
+  done, no matter what your implementation report says.
+
+## Relationship to litehive
+
+heru is maintained **alongside** litehive at `~/git/litehive`. They
+share a developer (you) and live on the same laptop. litehive depends
+on heru via `uv add --editable ~/git/heru`, so every heru save is
+immediately visible to litehive without any reinstall.
+
+**If a heru task requires changes in litehive to stay consistent**
+(e.g. adding a new adapter method that litehive needs to call), open
+a companion task in the litehive workspace referencing this task,
+and land the heru side FIRST. Litehive can then safely bump its own
+expectations.
+
+## Process overlay
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+## Project overlay
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+## Init scaffold
+- Scaffold `.litehive/context.md` from the generic base process template.
+- Layer the project profile summary, workspace overlay, and stage overlay onto that base.
+- Treat process profiles as overlays on the shared contract rather than separate workflows.
+- Keep the task/issue source of truth, verification commands, and recovery policy visible in the scaffold.
+- Seed Python workspaces with package layout, test entrypoints, and `uv` or virtualenv expectations.
+
+## Prompt scaffold
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+## Stage prompt scaffolding
+
+### grooming
+Act as the planner: clarify the user problem, inspect the repo if needed, and produce a concrete execution plan.
+Focus on scope clarification, acceptance criteria quality, decomposition, follow-up tasks, and PM sizing.
+Do not make code changes in this stage.
+
+### implementing
+Implement the task in this repository.
+Keep changes tightly scoped and complete the work needed for the acceptance criteria.
+Write tests so each assertion would fail if the feature is broken.
+Do not spend test coverage on framework behavior or library guarantees.
+Do not add tests that only restate defaults, constants, or static data.
+Keep each test focused on one behavior.
+Avoid duplicate coverage; extend an existing test only when it is the same behavior.
+- Write or update focused tests alongside the code change when feasible.
+- Use `pytest` for automated verification.
+- Use `tmp_path` or pytest fixtures instead of manual tempfiles in repo code or `/tmp` setup.
+- Mock external calls and integration edges, not the internal logic under test.
+- Do not use `time.sleep` in tests; use deterministic synchronization or time control.
+
+### testing
+Validate the implementation.
+Run focused checks or tests where possible and report failures precisely.
+Only make minimal fixes if absolutely necessary.
+Reject tests whose assertions would still pass if the feature were broken.
+Reject tests that duplicate existing coverage instead of covering a new behavior.
+Reject tests longer than 50 lines unless a shorter structure is genuinely impossible.
+Reject monolithic tests that exercise 5 or more behaviors in one flow.
+- Prefer targeted `pytest` invocations before broader test commands.
+- Verify new or updated tests use `pytest` idioms and fixtures.
+- Reject tests that use manual tempfiles where `tmp_path` would make isolation explicit.
+- Reject tests that mock the unit's internal logic instead of external boundaries.
+- Reject tests that rely on `time.sleep` instead of deterministic control.
+
+### accepting
+Act as the reviewer: validate the end-user outcome against the acceptance criteria and decide whether it should be accepted or sent back.
+Be strict about regression detection, evidence quality, and final done versus not-done judgment.
+
+## Python specifics
+- Prefer `pytest` for automated verification.
+- Keep module boundaries and import hygiene clear.
+- Record virtualenv, `uv`, or toolchain expectations when they matter.
+
+## Development rules
+- Keep changes scoped to the current task.
+- Prefer targeted tests over broad test suites.
+- Record assumptions clearly in the final report.
+
+## Tool usage
+- Use `uv run pytest -q` for the current smoke test suite.
+- Update litehive task artifacts instead of inventing external state stores.
+- If you add a new command or workflow, document it here for future runs.
+
+Shared process:
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+Project overlay:
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+Prompt scaffold:
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+Role focus:
+- You are the reviewer, a PM-style role representing the user's and product's point of view.
+- Validate the strict end-user outcome, look for regressions or missing evidence, and make a final done versus not-done judgment.
+- Reject work that is incomplete, weakly verified, or misaligned with the promised outcome.
+- If SWE shows the requested work was already implemented before this run and provides concrete verification evidence, accept the task to normal `done` rather than inventing a special closed status.
+- Use `wont_do`, `duplicate`, or `deferred` only when the task is genuinely obsolete, superseded, or duplicated.
+- You may close a task as duplicate, wont_do, or deferred by including `outcome: <status>` with optional `outcome_reason` in a TASK_UPDATE block. You may park a task with `action: park`.
+
+Stage instructions:
+Act as the reviewer: validate the end-user outcome against the acceptance criteria and decide whether it should be accepted or sent back.
+Be strict about regression detection, evidence quality, and final done versus not-done judgment.
+
+Goal:
+Today each heru adapter (codex, claude, copilot, gemini, opencode, goz) streams its engine's native JSONL payloads directly to stdout. Callers have to parse 6 different event schemas to extract agent messages, tool calls, tool outputs, errors, and usage. Define a single unified event envelope that heru emits regardless of the underlying engine. Each adapter translates its native events into the unified shape before streaming. The native payload stays embedded as a 'raw' field for consumers that need engine-specific detail.
+
+Acceptance criteria:
+- Define a UnifiedEvent schema (pydantic model) with fields like: kind (message|tool_call|tool_result|usage|error|status|continuation), engine, sequence, timestamp, role, content, tool_name, tool_input, tool_output, error, usage_delta, continuation_id, raw (the original native payload)
+- Each adapter implements a translate_native_event(native_payload) -> UnifiedEvent | None method that maps engine-specific events to the unified shape
+- ExternalCLIAdapter.run gains an emit_unified mode that streams UnifiedEvent JSONL to stdout instead of native payloads
+- heru CLI defaults to emit_unified output; a --raw flag opts back into native passthrough for debugging
+- Unit tests per adapter with fixture-based native event samples asserting the translated UnifiedEvent shape
+- Docs section in README.md describing the unified event schema
+
+Plan:
+- No plan defined.
+
+PM sizing:
+- Current PM complexity: moderate
+- Current planned effort: m
+
+Constraints:
+- Keep changes scoped to the task.
+
+
+Discussion thread:
+
+--- [2026-04-10T19:02:12+00:00] planner (grooming) — pass ---
+Verified by repo inspection only; no code changes and no tests run in grooming. Current state: `heru.main` forwards `execution.stdout` verbatim, `ExternalCLIAdapter.run` only returns native stdout/stderr, and each adapter already exposes engine-specific `stream_event_adapter()` hooks that normalize native payloads into internal `LiveEvent` values for timeline extraction. README also still marks unified JSONL output as not yet done. This confirms the problem statement and shows the narrowest implementation path is to promote that existing normalization layer into the public streamed contract rather than build a second event-mapping stack.
+
+Implementation plan:
+1. Add a public unified streamed event model in `heru/types.py` and export it from `heru/__init__.py`. Prefer extending/reusing the existing `LiveEvent` shape or clearly replacing it, because adding a second overlapping public event model would create unnecessary semver surface.
+2. Add a public per-adapter translation hook on `ExternalCLIAdapter` / adapters that converts one native payload into zero or one unified event envelope, preserving the original payload under `raw` and emitting continuation/usage/status events where present.
+3. Add an `emit_unified` path in `ExternalCLIAdapter.run` and `run_live` that rewrites JSONL stdout into unified JSONL while leaving `--raw` passthrough available for debugging. Codex needs special handling because its payload parser accepts multiline JSON objects rather than strict one-line JSONL.
+4. Update `heru.main` so unified output is the default CLI behavior and `--raw` disables translation.
+5. Add focused adapter tests with fixture-style native payload samples for codex, claude, copilot, gemini, opencode, and goz, plus CLI tests for default unified output vs `--raw` passthrough.
+6. Update README to document the public unified event schema and note that `raw` contains the provider-native payload.
+7. In implementing/testing stages, run targeted `uv run pytest` for the touched adapter/CLI tests, then the required Litehive contract smoke suite before finishing the task.
+
+Scope notes and risks:
+- This is a semver-relevant public API change because it adds a new public pydantic model and changes default CLI/stdout behavior. Keep signatures backwards compatible where possible and document the behavior shift.
+- The task should stay inside heru. No Litehive orchestration, stage-report, or routing changes are needed.
+- Acceptance criterion wording should be interpreted as observable outcomes, not a mandatory internal shape. The important observable is that every engine can emit one documented unified JSONL envelope with native payload preserved in `raw`.
+
+TASK_UPDATE:
+```yaml
+goal: Emit one documented, engine-agnostic JSONL event envelope from heru by default while preserving each provider payload under `raw` and keeping a `--raw` escape hatch for native passthrough.
+acceptance_criteria:
+  - Running `heru --engine <engine> <prompt>` emits unified JSONL events for every supported engine (`codex`, `claude`, `copilot`, `gemini`, `opencode`, `goz`) instead of provider-native payloads by default.
+  - Each unified event includes the common envelope fields needed by callers to consume messages, tool calls, tool results, usage, errors, status, and continuation data, and preserves the original provider payload under `raw`.
+  - The adapter layer exposes a single native-payload-to-unified-event translation path per engine, and fixture-driven unit tests verify representative native samples for each engine map to the expected unified event shape.
+  - Passing `--raw` to the heru CLI restores native stdout passthrough without changing stderr or process exit behavior.
+  - README documents the unified event schema, default CLI behavior, and the purpose of the `raw` field.
+plan:
+  - Reuse the existing stream-event parsing logic as the basis for a public unified event envelope instead of introducing a second independent normalization stack.
+  - Add unified event emission hooks in the base adapter run path and expose the new schema from the public package surface.
+  - Cover adapter translation and CLI default/`--raw` behavior with focused pytest tests, then run the Litehive smoke suite before completion.
+pm_complexity: moderate
+planned_effort: m
+```
+
+
+--- [2026-04-10T19:09:36+00:00] swe (implementing) — pass ---
+Implemented unified JSONL event output across heru. Added public UnifiedEvent support in heru/types.py and exported it, extended the base adapter stream contract with continuation extraction plus native-payload translation/render_unified_output helpers, and added emit_unified handling to ExternalCLIAdapter.run/run_live. The CLI now defaults to unified output and accepts --raw to keep native passthrough. Each engine adapter now exposes translate_native_event(), codex overrides native payload iteration for multiline objects, and stream adapters emit continuation ids where available. README now documents the unified event envelope and default/--raw behavior. Added focused adapter translation coverage in tests/test_unified_events.py plus CLI coverage for unified default vs --raw in tests/test_heru_cli.py. Verified with: uv run python -m pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py (16 passed), uv run python -m pytest -q (34 passed), and the required Litehive contract smoke suite from ~/git/litehive: uv run python -m pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py (197 passed). Acceptance evidence: all supported engines now translate native payloads into a unified envelope with raw preserved, CLI default output is unified JSONL with --raw escape hatch, per-adapter tests assert representative mappings, and docs describe the schema.
+
+--- [2026-04-10T19:11:34+00:00] qa (testing) — pass ---
+Validated the unified JSONL event implementation against the acceptance criteria. Verified the public contract in heru/types.py, heru/base.py, and heru/main.py: UnifiedEvent is public, adapters translate native payloads through translate_native_event(s), ExternalCLIAdapter.run/run_live support emit_unified, and CLI defaults to unified output with --raw opting back into native passthrough. Reviewed representative adapter hooks for codex/claude/copilot/gemini/opencode/goz and confirmed each exposes the unified translation path through the shared stream adapter layer, with raw payload preservation and continuation support where emitted. Ran focused verification: uv run pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py -> 16 passed. This covers per-engine fixture-style translations (codex message, claude tool_call, copilot usage, gemini continuation, opencode usage+continuation, goz tool_result) plus CLI default unified vs --raw behavior. Ran full heru suite: uv run pytest -q -> 34 passed. Ran required Litehive contract smoke from /home/alexey/git/litehive: uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -> 197 passed. Evidence supports the acceptance criteria: one documented unified envelope is emitted by default, native payload is preserved under raw, adapters expose translation hooks, --raw restores native passthrough, tests cover representative adapter mappings, and README documents the schema/default behavior. Residual risk: adapter tests are representative rather than exhaustive for every native event variant, but there is no failing evidence and the cross-repo contract suite stayed green.
+
+IMPORTANT: When you are done, you MUST submit your verdict by running:
+  litehive report --verdict <pass|reject> --role reviewer --step accepting --message "<your report>"
+The environment variable LITEHIVE_TASK_ID is set to T-0001 for this session. Workspace and task resolution should use the injected environment automatically.
+
+Your --message is the PRIMARY way the next agent understands what happened.
+Do NOT rely on your raw transcript being read — write the report as if it is the only thing the next agent will see.
+
+Report requirements:
+- On PASS/ACCEPT: explain what you verified, what tests you ran, what evidence confirms the acceptance criteria are met.
+- On REJECT: you MUST include ALL of the following:
+  1. EXPECTED behavior: what should happen according to the acceptance criteria
+  2. OBSERVED behavior: what actually happens (exact error messages, test output, wrong values)
+  3. Steps to reproduce: the exact command or test that demonstrates the gap
+  4. Which acceptance criteria are not met and which ones are already satisfied
+
+A vague rejection like 'tests fail' or 'missing evidence' is useless and causes infinite loops.
+A good rejection looks like: 'Expected: `litehive engine gemini` switches the default engine and prints confirmation. Observed: command exits 0 but config.yaml still shows the old engine. Reproduce: run `litehive engine gemini` then `cat .litehive/config.yaml`. Criteria 1-3 are met, criterion 4 (persistence) is not.'
