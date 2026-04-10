@@ -365,7 +365,7 @@ class ExternalCLIAdapter:
                 return
             stdout = stdout_chunks.decode("utf-8", errors="replace")
             if emit_unified:
-                stdout = self.render_unified_output(stdout)
+                stdout = self._render_live_unified_output(stdout)
             on_update(
                 CLIExecutionResult(
                     adapter=self.name,
@@ -549,6 +549,9 @@ class ExternalCLIAdapter:
     def iter_native_payloads(self, stdout: str) -> list[dict[str, object]]:
         return iter_jsonl_payloads(stdout)
 
+    def _iter_live_native_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return self.iter_native_payloads(stdout)
+
     def translate_native_event(
         self,
         native_payload: dict[str, object],
@@ -580,10 +583,19 @@ class ExternalCLIAdapter:
         return unified_events
 
     def render_unified_output(self, stdout: str) -> str:
+        return self._render_unified_output_from_payloads(self.iter_native_payloads(stdout))
+
+    def _render_live_unified_output(self, stdout: str) -> str:
+        return self._render_unified_output_from_payloads(self._iter_live_native_payloads(stdout))
+
+    def _render_unified_output_from_payloads(
+        self,
+        payloads: list[dict[str, object]],
+    ) -> str:
         unified_lines: list[str] = []
         sequence = 0
         final_continuation_id: str | None = None
-        for payload in self.iter_native_payloads(stdout):
+        for payload in payloads:
             for event in self.translate_native_events(payload):
                 if event.kind == "continuation":
                     final_continuation_id = event.continuation_id or event.content or final_continuation_id

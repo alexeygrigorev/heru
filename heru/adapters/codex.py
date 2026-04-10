@@ -153,6 +153,9 @@ class CodexCLIAdapter(ExternalCLIAdapter):
     def iter_native_payloads(self, stdout: str) -> list[dict[str, object]]:
         return iter_codex_payloads(stdout)
 
+    def _iter_live_native_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return iter_codex_payloads(stdout, allow_incomplete_trailing=True)
+
     def translate_native_event(
         self,
         native_payload: dict[str, object],

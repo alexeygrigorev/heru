@@ -1,4 +1,6 @@
+import logging
 from pathlib import Path
+import sys
 
 from heru.adapters._codex_impl import (
     classify_codex_usage_limit,
@@ -10,7 +12,7 @@ from heru.adapters._codex_impl import (
     iter_codex_payloads,
 )
 from heru.adapters.codex import CodexCLIAdapter
-from heru.base import LATEST_CONTINUATION_SENTINEL
+from heru.base import CLIInvocation, LATEST_CONTINUATION_SENTINEL
 
 
 def _execution(tmp_path: Path, stdout: str, *, stderr: str = "", exit_code: int = 0):
@@ -24,6 +26,31 @@ def _execution(tmp_path: Path, stdout: str, *, stderr: str = "", exit_code: int 
         stdout=stdout,
         stderr=stderr,
     )
+
+
+class _LiveCodexAdapter(CodexCLIAdapter):
+    def __init__(self, script: Path) -> None:
+        super().__init__(binary=sys.executable)
+        self._script = script
+
+    def build_command(self, prompt, cwd, model=None, *, max_turns=None, resume_session_id=None):
+        return [sys.executable, str(self._script)]
+
+    def build_invocation(self, prompt, cwd, model=None, *, max_turns=None, resume_session_id=None, extra_env=None):
+        invocation = super().build_invocation(
+            prompt,
+            cwd,
+            model=model,
+            max_turns=max_turns,
+            resume_session_id=resume_session_id,
+            extra_env=extra_env,
+        )
+        return CLIInvocation(
+            argv=invocation.argv,
+            cwd=invocation.cwd,
+            env=invocation.env,
+            stdin_data=None,
+        )
 
 
 def test_codex_build_invocation_fresh_shape(tmp_path: Path) -> None:
@@ -205,3 +232,50 @@ def test_codex_live_events_exposes_message_tool_and_usage() -> None:
     assert tool_events[0].tool_name == "bash"
     assert tool_events[0].tool_output == "/tmp"
     assert usage_events[0].metadata == {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3}
+
+
+def test_codex_run_live_emit_unified_handles_large_item_completed_fixture(
+    tmp_path: Path, fixture_loader, caplog
+) -> None:
+    stdout = fixture_loader("codex_large_item_completed.jsonl")
+    payload_file = tmp_path / "payload.jsonl"
+    payload_file.write_text(stdout, encoding="utf-8")
+    script = tmp_path / "live_codex.py"
+    script.write_text(
+        "from pathlib import Path\n"
+        "import sys, time\n"
+        f"payload = Path({str(payload_file)!r}).read_text(encoding='utf-8')\n"
+        "sys.stdout.write(payload[:4096])\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(0.1)\n"
+        "sys.stdout.write(payload[4096:])\n"
+        "sys.stdout.flush()\n",
+        encoding="utf-8",
+    )
+    caplog.set_level(logging.WARNING, logger="litehive.agents.adapters.codex")
+
+    result = _LiveCodexAdapter(script).run_live(prompt="ignored", cwd=tmp_path, emit_unified=True)
+
+    assert '"kind":"tool_result"' in result.stdout
+    assert '"tool_name":"bash"' in result.stdout
+    assert '"tool_output":"' + ("A" * 8192) in result.stdout
+    assert not [record for record in caplog.records if "skipping" in record.message]
+
+
+def test_codex_run_live_emit_unified_logs_truncated_payload_once(tmp_path: Path, caplog) -> None:
+    script = tmp_path / "truncated_codex.py"
+    script.write_text(
+        "import sys, time\n"
+        "sys.stdout.write('{\"type\":\"item.completed\",\"item\":{\"type\":\"command_execution\",\"aggregated_output\":\"')\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(0.1)\n",
+        encoding="utf-8",
+    )
+    caplog.set_level(logging.WARNING, logger="litehive.agents.adapters.codex")
+
+    _LiveCodexAdapter(script).run_live(prompt="ignored", cwd=tmp_path, emit_unified=True)
+
+    messages = [record.message for record in caplog.records if "unterminated JSON object" in record.message]
+    assert messages == [
+        'codex: skipping unterminated JSON object at line 1 (content: {"type":"item.completed","item":{"type":"command_execution","aggregated_output":")'
+    ]

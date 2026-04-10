@@ -44,7 +44,11 @@ class _JsonBalance:
     escaped: bool = False
 
 
-def iter_codex_payloads(stdout: str) -> list[dict[str, object]]:
+def iter_codex_payloads(
+    stdout: str,
+    *,
+    allow_incomplete_trailing: bool = False,
+) -> list[dict[str, object]]:
     payloads: list[dict[str, object]] = []
     buffered_lines: list[str] = []
     buffer_start_line = 0
@@ -85,7 +89,7 @@ def iter_codex_payloads(stdout: str) -> list[dict[str, object]]:
         buffered_lines = []
         balance = _JsonBalance()
 
-    if buffered_lines:
+    if buffered_lines and not allow_incomplete_trailing:
         payload_text = "\n".join(buffered_lines).strip()
         _warn_bad_codex_payload(buffer_start_line, payload_text, "unterminated JSON object")
     return payloads
