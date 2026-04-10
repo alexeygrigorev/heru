@@ -6,15 +6,15 @@ task_type: null
 model: null
 mode: implementation
 pipeline_mode: full
-status: in_progress
+status: done
 flag_reason: null
 flag_count: 0
-pipeline_status: commit_to_git
+pipeline_status: done
 priority: high
 pm_complexity: simple
 planned_effort: s
 created_at: '2026-04-10T18:49:11+00:00'
-updated_at: '2026-04-10T19:28:19+00:00'
+updated_at: '2026-04-10T19:28:21+00:00'
 goal: Current CLI is 'heru <prompt> --engine codex'. The vision is 'heru codex <prompt>'
   with the engine as a positional subcommand. Switch to a Typer-based CLI where each
   engine is a registered subcommand that shares common options (--cwd, --resume, --model,
@@ -71,9 +71,9 @@ subagents:
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0002 positional-engine-argument-in-heru-cli-heru'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
+  commit_sha: 28c50365c169e9c5d560fa0f3018ea0d33e39617
+  checkpoint_base_sha: c944ea5c94a64ac30dfa4f9a620a14a79d5e50c9
+  checkpoint_attempts: 1
   rolled_back_checkpoint_attempt: null
   merge_agent_attempts: 0
   worktree_path: null

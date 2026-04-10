@@ -1,0 +1,87 @@
+task_id: T-0003
+step: implementing
+verdict: pass
+source: agent
+summary: "Implemented unified resume/continue across heru CLI and adapters. Added\
+  \ shared --continue parsing for engine subcommands and legacy --engine mode, with\
+  \ explicit rejection of --resume + --continue together and a clear CLI error for\
+  \ engines that require an explicit id (goz). Added internal latest-session normalization\
+  \ in heru/base.py and mapped native latest-session resume flags per engine: codex\
+  \ exec resume without id, claude --resume, gemini --resume, copilot --continue,\
+  \ opencode --continue; explicit ids still map to each engine\u2019s native resume/session\
+  \ flag. Tightened unified JSONL rendering to append exactly one final continuation\
+  \ event at end-of-run containing the finished session/thread id. Filled the missing\
+  \ Copilot continuation extraction path so Copilot now emits continuation ids in\
+  \ the unified stream as well. Added focused tests for CLI forwarding/error cases,\
+  \ adapter argv mapping for latest-session resume, Copilot continuation translation,\
+  \ final continuation-event ordering, legacy --continue support, and a fixture-driven\
+  \ two-run resume flow across all engines that captures the first run\u2019s continuation\
+  \ id and verifies the second run resumes prior context. Verification run with the\
+  \ worktree pinned on PYTHONPATH due uv importing the main checkout by default: PYTHONPATH=$PWD\
+  \ uv run --active pytest tests/test_heru_cli.py tests/test_unified_events.py tests/test_goz_adapter.py\
+  \ tests/test_resume_adapters.py -q -> 62 passed; PYTHONPATH=$PWD uv run --active\
+  \ pytest -q -> 80 passed; cd /home/alexey/git/litehive && PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0003-unified-resume-continue-across-all-engines\
+  \ uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py\
+  \ tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Evidence against\
+  \ acceptance criteria: every engine subcommand now accepts --resume <id>; all supported\
+  \ engines accept --continue and goz errors cleanly; unified output appends a final\
+  \ continuation event with the finished session id; the two-run resume flow is covered\
+  \ across engines via CLI-level integration-style tests."
+feedback: "Implemented unified resume/continue across heru CLI and adapters. Added\
+  \ shared --continue parsing for engine subcommands and legacy --engine mode, with\
+  \ explicit rejection of --resume + --continue together and a clear CLI error for\
+  \ engines that require an explicit id (goz). Added internal latest-session normalization\
+  \ in heru/base.py and mapped native latest-session resume flags per engine: codex\
+  \ exec resume without id, claude --resume, gemini --resume, copilot --continue,\
+  \ opencode --continue; explicit ids still map to each engine\u2019s native resume/session\
+  \ flag. Tightened unified JSONL rendering to append exactly one final continuation\
+  \ event at end-of-run containing the finished session/thread id. Filled the missing\
+  \ Copilot continuation extraction path so Copilot now emits continuation ids in\
+  \ the unified stream as well. Added focused tests for CLI forwarding/error cases,\
+  \ adapter argv mapping for latest-session resume, Copilot continuation translation,\
+  \ final continuation-event ordering, legacy --continue support, and a fixture-driven\
+  \ two-run resume flow across all engines that captures the first run\u2019s continuation\
+  \ id and verifies the second run resumes prior context. Verification run with the\
+  \ worktree pinned on PYTHONPATH due uv importing the main checkout by default: PYTHONPATH=$PWD\
+  \ uv run --active pytest tests/test_heru_cli.py tests/test_unified_events.py tests/test_goz_adapter.py\
+  \ tests/test_resume_adapters.py -q -> 62 passed; PYTHONPATH=$PWD uv run --active\
+  \ pytest -q -> 80 passed; cd /home/alexey/git/litehive && PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0003-unified-resume-continue-across-all-engines\
+  \ uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py\
+  \ tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Evidence against\
+  \ acceptance criteria: every engine subcommand now accepts --resume <id>; all supported\
+  \ engines accept --continue and goz errors cleanly; unified output appends a final\
+  \ continuation event with the finished session id; the two-run resume flow is covered\
+  \ across engines via CLI-level integration-style tests."
+submitted_via_cli: true
+files_changed:
+- heru/adapters/_copilot_impl.py
+- heru/adapters/claude.py
+- heru/adapters/codex.py
+- heru/adapters/copilot.py
+- heru/adapters/gemini.py
+- heru/adapters/goz.py
+- heru/adapters/opencode.py
+- heru/base.py
+- heru/main.py
+- tests/test_heru_cli.py
+- tests/test_resume_adapters.py
+- tests/test_unified_events.py
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 451
+hook_results: []
+created_at: '2026-04-10T19:39:11+00:00'

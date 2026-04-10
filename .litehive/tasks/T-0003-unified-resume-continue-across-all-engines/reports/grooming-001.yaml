@@ -1,0 +1,85 @@
+task_id: T-0003
+step: grooming
+verdict: pass
+source: agent
+summary: Grooming pass. I inspected the current heru CLI and adapter plumbing to verify
+  scope and identify the implementation gaps before handoff. No code changes were
+  made and no tests were run in this stage because this is planning-only work.
+feedback: 'Grooming pass. I inspected the current heru CLI and adapter plumbing to
+  verify scope and identify the implementation gaps before handoff. No code changes
+  were made and no tests were run in this stage because this is planning-only work.
+
+
+  What I verified from the repo:
+
+  - `heru/main.py` already exposes shared `--resume` on engine subcommands and forwards
+  it as `resume_session_id`, but there is no shared `--continue` flag yet.
+
+  - Adapter resume support is incomplete and asymmetric: Codex, Claude, Gemini, Goz,
+  and OpenCode only accept explicit ids today; Copilot already special-cases `resume_session_id
+  == "latest"` to emit native `--continue`.
+
+  - Unified event rendering in `heru/base.py` already knows how to emit `kind="continuation"`
+  when an adapter surfaces a continuation id, but the current behavior is opportunistic
+  per payload, not explicitly guaranteed to emit one final continuation event at end-of-run.
+
+  - Continuation extraction/test coverage is incomplete: there is unified-event coverage
+  for Gemini and OpenCode, adapter extraction coverage for Goz, but no equivalent
+  continuation extraction path for Copilot and no end-to-end resume/continue integration
+  coverage yet.
+
+
+  Implementation plan for the next stage:
+
+  1. Add CLI parsing for a shared `--continue` flag, reject invalid `--resume` + `--continue`
+  combinations, and normalize the request into existing adapter `resume_session_id`
+  plumbing without changing the public adapter API.
+
+  2. Normalize engine behavior per adapter: explicit session/thread id for `--resume
+  <id>` on all engines; native latest-session continuation only where the engine supports
+  it; clear CLI error for engines that require an explicit id.
+
+  3. Tighten unified JSONL continuation semantics so callers get exactly one final
+  continuation event containing the completed session/thread id when the adapter can
+  identify it.
+
+  4. Add focused tests for CLI forwarding/error cases, per-adapter argv mapping, continuation-event
+  ordering, and missing continuation coverage.
+
+  5. Add integration coverage for the two-run resume flow: real Codex round-trip if
+  available in the test environment, otherwise guard it appropriately; use fake/fixture-driven
+  adapters for the remaining engines to stay within the repo rule against shelling
+  out to third-party CLIs in unit tests.
+
+  6. Run targeted heru pytest coverage and then the required litehive smoke suite
+  before handing off to testing/accepting.
+
+
+  Recommended task-shaping updates for the implementing agent to keep in mind, since
+  `litehive task update` is currently blocked while the task is active: treat this
+  as PM complexity `moderate`, planned effort `m`, task type `adapter`, and use the
+  plan above as the execution checklist. The acceptance criteria are already directionally
+  correct, but they should be interpreted as requiring explicit coverage for invalid
+  `--resume`/`--continue` combinations and for final-event ordering of the emitted
+  continuation record.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 195
+hook_results: []
+created_at: '2026-04-10T19:31:40+00:00'

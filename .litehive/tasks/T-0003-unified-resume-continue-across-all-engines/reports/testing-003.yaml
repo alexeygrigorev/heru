@@ -1,0 +1,59 @@
+task_id: T-0003
+step: testing
+verdict: pass
+source: agent
+summary: 'Verified unified resume/continue behavior end to end. I inspected the implementation
+  diff in heru/main.py, heru/base.py, and the engine adapters, plus the new tests
+  in tests/test_heru_cli.py, tests/test_unified_events.py, and tests/test_resume_adapters.py.
+  Focused pytest coverage passed: PYTHONPATH=$PWD uv run --active pytest tests/test_heru_cli.py
+  tests/test_unified_events.py tests/test_resume_adapters.py tests/test_goz_adapter.py
+  -q -> 62 passed. Full heru suite passed: PYTHONPATH=$PWD uv run --active pytest
+  -q -> 80 passed. Required litehive contract smoke passed: PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0003-unified-resume-continue-across-all-engines
+  uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Acceptance evidence:
+  every engine subcommand accepts --resume <id>; supported engines accept --continue
+  and forward the native latest-session behavior via adapter-specific argv mapping;
+  goz rejects --continue with the expected explicit-id error path; unified JSONL rendering
+  appends exactly one final continuation event containing the finished session id;
+  and the two-run CLI resume flow is covered across all engines by capturing the first
+  run continuation_id and reusing it on the second run to verify prior-context continuation.
+  I also directly spot-checked goz --continue returning exit 1 with the expected message
+  and gemini unified output ending in a continuation event with the session id.'
+feedback: 'Verified unified resume/continue behavior end to end. I inspected the implementation
+  diff in heru/main.py, heru/base.py, and the engine adapters, plus the new tests
+  in tests/test_heru_cli.py, tests/test_unified_events.py, and tests/test_resume_adapters.py.
+  Focused pytest coverage passed: PYTHONPATH=$PWD uv run --active pytest tests/test_heru_cli.py
+  tests/test_unified_events.py tests/test_resume_adapters.py tests/test_goz_adapter.py
+  -q -> 62 passed. Full heru suite passed: PYTHONPATH=$PWD uv run --active pytest
+  -q -> 80 passed. Required litehive contract smoke passed: PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0003-unified-resume-continue-across-all-engines
+  uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Acceptance evidence:
+  every engine subcommand accepts --resume <id>; supported engines accept --continue
+  and forward the native latest-session behavior via adapter-specific argv mapping;
+  goz rejects --continue with the expected explicit-id error path; unified JSONL rendering
+  appends exactly one final continuation event containing the finished session id;
+  and the two-run CLI resume flow is covered across all engines by capturing the first
+  run continuation_id and reusing it on the second run to verify prior-context continuation.
+  I also directly spot-checked goz --continue returning exit 1 with the expected message
+  and gemini unified output ending in a continuation event with the session id.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 136
+hook_results: []
+created_at: '2026-04-10T19:41:27+00:00'

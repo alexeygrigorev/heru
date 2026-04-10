@@ -1,0 +1,52 @@
+id: T-0008
+slug: fix-codex-jsonl-reader-truncating-large-item
+title: Fix codex JSONL reader truncating large item.completed events
+depends_on: []
+task_type: bugfix
+model: null
+mode: tasks
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: high
+pm_complexity: moderate
+planned_effort: m
+created_at: '2026-04-10T19:33:18+00:00'
+updated_at: '2026-04-10T19:33:18+00:00'
+goal: 'heru''s codex adapter reader truncates JSONL lines containing large aggregated_output
+  fields, producing ''Unterminated string'' parse errors and silently dropping item.completed
+  events. Find the line-length / buffer cap in the codex stream reader and raise or
+  remove it so full events make it to downstream consumers. Also dedupe the skip-logging:
+  each truncated line is currently logged 6-10 times by overlapping layers (codex:,
+  iter_jsonl_payloads:).'
+acceptance_criteria:
+- Codex events with aggregated_output > 8KB parse successfully end-to-end
+- No duplicate skip-log messages for a single malformed/truncated line
+- Regression test with a fixture containing a large aggregated_output line
+- litehive contract tests still pass
+constraints:
+- Prefer the smallest change that removes the failure mode.
+- Call out any remaining edge cases or follow-up risk explicitly.
+plan:
+- Reproduce or localize the failing behavior.
+- Implement the minimal targeted fix.
+- Run focused regression coverage for the affected behavior.
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0008 fix-codex-jsonl-reader-truncating-large-item'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null
