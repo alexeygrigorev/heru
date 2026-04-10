@@ -1,0 +1,5 @@
+{"type":"text","sessionID":"goz-session-123","part":{"type":"text","text":"Hello "}}
+{"type":"text","sessionID":"goz-session-123","part":{"type":"text","text":"Goz"}}
+{"type":"tool_use","sessionID":"goz-session-123","part":{"id":"tool-1","name":"grep","input":{"pattern":"hi"}}}
+{"type":"tool_result","tool":"grep","result":{"matches":2}}
+{"type":"step_finish","sessionID":"goz-session-123","part":{"type":"step-finish","reason":"stop"},"usage":{"input_tokens":5,"output_tokens":4,"total_tokens":9,"model":"glm-4.5"},"cost":0.11}

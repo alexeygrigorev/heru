@@ -1,0 +1,6 @@
+{"type":"init","session_id":"gemini-session-123","model":"gemini-2.5-pro"}
+{"type":"message","role":"assistant","content":"Gemini text"}
+{"type":"content","text":"Gemini text"}
+{"type":"tool_call","name":"search","args":{"q":"hello"}}
+{"type":"tool_result","result":{"answer":"world"}}
+{"type":"finished","value":{"reason":"STOP","usageMetadata":{"promptTokenCount":11,"candidatesTokenCount":7,"thoughtsTokenCount":2,"cachedContentTokenCount":1,"toolUsePromptTokenCount":3,"totalTokenCount":18}}}

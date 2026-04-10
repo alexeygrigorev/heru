@@ -316,6 +316,7 @@ class ExternalCLIAdapter:
         if invocation.stdin_data and proc.stdin is not None:
             proc.stdin.write(invocation.stdin_data.encode("utf-8"))
             proc.stdin.close()
+            proc.stdin = None
         if on_started is not None:
             on_started(proc.pid)
         assert proc.stdout is not None
@@ -332,14 +333,16 @@ class ExternalCLIAdapter:
             if proc.poll() is None:
                 proc.terminate()
                 try:
-                    stdout_tail, stderr_tail = proc.communicate(timeout=1.0)
+                    proc.wait(timeout=1.0)
                 except subprocess.TimeoutExpired:
                     proc.kill()
-                    stdout_tail, stderr_tail = proc.communicate()
-            else:
-                stdout_tail, stderr_tail = proc.communicate()
-            stdout_chunks.extend(stdout_tail or b"")
-            stderr_chunks.extend(stderr_tail or b"")
+                    proc.wait()
+            if proc.stdout is not None:
+                stdout_chunks.extend(proc.stdout.read() or b"")
+                proc.stdout.close()
+            if proc.stderr is not None:
+                stderr_chunks.extend(proc.stderr.read() or b"")
+                proc.stderr.close()
 
         def emit_update() -> None:
             if on_update is None:
