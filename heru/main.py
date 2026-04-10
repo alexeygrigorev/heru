@@ -12,6 +12,7 @@ import click
 import typer
 
 from heru import ENGINE_CHOICES, get_engine
+from heru.base import LATEST_CONTINUATION_SENTINEL
 
 app = typer.Typer(
     add_completion=False,
@@ -28,9 +29,18 @@ def _run_engine(
     model: str | None = None,
     max_turns: int | None = None,
     resume: str | None = None,
+    continue_latest: bool = False,
     raw: bool = False,
 ) -> int:
     engine = get_engine(engine_name)
+    if resume is not None and continue_latest:
+        raise click.ClickException("Cannot combine --resume with --continue.")
+    if continue_latest:
+        if not engine.supports_continue_latest():
+            raise click.ClickException(
+                f"{engine_name} does not support --continue; pass --resume <id> instead."
+            )
+        resume = LATEST_CONTINUATION_SENTINEL
     run_kwargs = {
         "model": model,
         "max_turns": max_turns,
@@ -54,6 +64,10 @@ ResumeOption = Annotated[
     str | None,
     typer.Option(help="Resume a prior engine session by continuation or session ID."),
 ]
+ContinueOption = Annotated[
+    bool,
+    typer.Option("--continue", help="Resume the most recent session for this engine."),
+]
 RawOption = Annotated[bool, typer.Option(help="Emit the engine's raw JSON/JSONL output.")]
 
 
@@ -64,6 +78,7 @@ def _engine_command_factory(engine_name: str):
         model: ModelOption = None,
         max_turns: MaxTurnsOption = None,
         resume: ResumeOption = None,
+        continue_: ContinueOption = False,
         raw: RawOption = False,
     ) -> int:
         return _run_engine(
@@ -73,6 +88,7 @@ def _engine_command_factory(engine_name: str):
             model=model,
             max_turns=max_turns,
             resume=resume,
+            continue_latest=continue_,
             raw=raw,
         )
 
@@ -94,6 +110,7 @@ def build_legacy_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-turns", type=int)
     parser.add_argument("--resume")
     parser.add_argument("--resume-session-id")
+    parser.add_argument("--continue", dest="continue_", action="store_true")
     parser.add_argument("--raw", action="store_true")
     return parser
 
@@ -117,15 +134,16 @@ def _run_legacy_cli(argv: list[str]) -> int:
         model=args.model,
         max_turns=args.max_turns,
         resume=resume,
+        continue_latest=args.continue_,
         raw=args.raw,
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     effective_argv = list(sys.argv[1:] if argv is None else argv)
-    if _is_legacy_invocation(effective_argv):
-        return _run_legacy_cli(effective_argv)
     try:
+        if _is_legacy_invocation(effective_argv):
+            return _run_legacy_cli(effective_argv)
         result = app(
             args=effective_argv,
             prog_name="heru",

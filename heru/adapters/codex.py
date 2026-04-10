@@ -57,6 +57,9 @@ class CodexCLIAdapter(ExternalCLIAdapter):
         transcript_format="jsonl",
     )
 
+    def supports_continue_latest(self) -> bool:
+        return True
+
     def build_command(
         self,
         prompt: str,
@@ -72,6 +75,7 @@ class CodexCLIAdapter(ExternalCLIAdapter):
         # `codex exec resume` does not accept --cd — the subprocess cwd is
         # already set to the worktree path by the caller, so codex inherits it.
         command: list[str] = [self.binary, "exec"]
+        latest_resume = self.is_latest_continuation(resume_session_id)
         if resume_session_id:
             command.append("resume")
         command.extend([
@@ -83,7 +87,7 @@ class CodexCLIAdapter(ExternalCLIAdapter):
             command.extend(["--cd", str(cwd)])
         if model:
             command.extend(["--model", model])
-        if resume_session_id:
+        if resume_session_id and not latest_resume:
             command.append(resume_session_id)
         command.append(prompt)
         return command

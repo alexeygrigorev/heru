@@ -34,6 +34,7 @@ logger = logging.getLogger("litehive.agents.base")
 
 TranscriptFormat = Literal["text", "jsonl"]
 _CALLER_WORKSPACE_ENV_VAR = "LITEHIVE_WORKSPACE_ROOT"
+LATEST_CONTINUATION_SENTINEL = "__heru_continue_latest__"
 _INHERITED_PYTHON_ENV_VARS = (
     "VIRTUAL_ENV",
     "CONDA_PREFIX",
@@ -194,6 +195,12 @@ class ExternalCLIAdapter:
 
     def detect_capabilities(self) -> AdapterCapabilities:
         return replace(self.capabilities, available=self.is_available())
+
+    def supports_continue_latest(self) -> bool:
+        return False
+
+    def is_latest_continuation(self, resume_session_id: str | None) -> bool:
+        return resume_session_id == LATEST_CONTINUATION_SENTINEL
 
     def build_command(
         self,
@@ -556,15 +563,26 @@ class ExternalCLIAdapter:
     def render_unified_output(self, stdout: str) -> str:
         unified_lines: list[str] = []
         sequence = 0
+        final_continuation_id: str | None = None
         for payload in self.iter_native_payloads(stdout):
             for event in self.translate_native_events(payload):
+                if event.kind == "continuation":
+                    final_continuation_id = event.continuation_id or event.content or final_continuation_id
+                    continue
                 event.sequence = sequence
                 if not event.engine:
                     event.engine = self.name
-                unified_lines.append(
-                    event.model_dump_json(exclude_none=True)
-                )
+                unified_lines.append(event.model_dump_json(exclude_none=True))
                 sequence += 1
+        if final_continuation_id:
+            unified_lines.append(
+                UnifiedEvent(
+                    kind="continuation",
+                    engine=self.name,
+                    sequence=sequence,
+                    continuation_id=final_continuation_id,
+                ).model_dump_json(exclude_none=True)
+            )
         return ("\n".join(unified_lines) + "\n") if unified_lines else ""
 
     def _live_event_to_unified_event(
