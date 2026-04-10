@@ -112,3 +112,28 @@ heru into litehive. Tracking in the litehive task backlog.
 ```bash
 uv run pytest
 ```
+
+## Development
+
+Install the versioned git hook with:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+The installer symlinks `scripts/pre-commit.sh` into your real git hook directory using `git rev-parse --git-path hooks/pre-commit`, so it works from normal checkouts and git worktrees.
+
+When staged files touch `heru/` or `tests/`, the hook treats that commit as a potential change to heru's public contract with litehive and runs this focused smoke suite in the litehive repo:
+
+```bash
+cd ../litehive && uv run pytest -q \
+  tests/test_runner_workflow.py \
+  tests/test_engine_variants_and_timeline.py \
+  tests/test_heru_cli.py \
+  tests/test_codex_quota.py \
+  tests/test_observability_and_status.py
+```
+
+The hook looks for litehive in a sibling checkout at `../litehive`, then falls back to `LITEHIVE_REPO`. If neither exists, it prints a warning and skips the smoke run so standalone heru users are not blocked.
+
+The smoke suite is intended to protect the editable-install contract between heru and litehive: litehive imports heru directly from your local checkout, so breaking `heru` method names, CLI argv shape, event schema, or quota helpers can regress litehive immediately. If you need to bypass the hook intentionally, commit with `git commit --no-verify`, but that should be the exception rather than the default workflow.
