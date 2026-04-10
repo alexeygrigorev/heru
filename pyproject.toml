@@ -28,3 +28,6 @@ packages = ["heru"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: opt-in real engine CLI smoke tests",
+]
