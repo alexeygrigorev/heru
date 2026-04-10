@@ -1,0 +1,59 @@
+task_id: T-0007
+step: implementing
+verdict: pass
+source: agent
+summary: 'Added a standalone public-API contract suite under tests/contract/ and documented
+  it in README as the semver-major guarded ''thou shalt not break'' suite. The new
+  contract directory contains 30 test functions and 59 collected pytest cases covering
+  public entrypoints (ENGINE_CHOICES/get_engine), ExternalCLIAdapter/base behaviors
+  (build_invocation env shaping, run emit_unified, run_live inactivity timeout, continuation
+  extraction), each public adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract using fixture-only inputs, latest-resume argv mapping, and the public heru.types
+  constructors/models including LiveTimeline.recompute_counts and RuntimeEngineContinuation.resume_id.
+  No litehive imports, no engine CLI calls, and no network were added in tests/contract/.
+  Verified with: uv run pytest -q tests/contract -> 59 passed in 0.10s; uv run pytest
+  -q -> 232 passed in 4.54s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q -> 197 passed, 3 warnings in 16.76s. Acceptance criteria met: tests/contract
+  exists and is picked up by default pytest via tests/; README now states tests/contract
+  changes are semver-major and require major version bump + CHANGELOG + migration
+  note; suite remains fixture-only and heru-standalone.'
+feedback: 'Added a standalone public-API contract suite under tests/contract/ and
+  documented it in README as the semver-major guarded ''thou shalt not break'' suite.
+  The new contract directory contains 30 test functions and 59 collected pytest cases
+  covering public entrypoints (ENGINE_CHOICES/get_engine), ExternalCLIAdapter/base
+  behaviors (build_invocation env shaping, run emit_unified, run_live inactivity timeout,
+  continuation extraction), each public adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract using fixture-only inputs, latest-resume argv mapping, and the public heru.types
+  constructors/models including LiveTimeline.recompute_counts and RuntimeEngineContinuation.resume_id.
+  No litehive imports, no engine CLI calls, and no network were added in tests/contract/.
+  Verified with: uv run pytest -q tests/contract -> 59 passed in 0.10s; uv run pytest
+  -q -> 232 passed in 4.54s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q -> 197 passed, 3 warnings in 16.76s. Acceptance criteria met: tests/contract
+  exists and is picked up by default pytest via tests/; README now states tests/contract
+  changes are semver-major and require major version bump + CHANGELOG + migration
+  note; suite remains fixture-only and heru-standalone.'
+submitted_via_cli: true
+files_changed:
+- README.md
+- tests/contract/
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 463
+hook_results: []
+created_at: '2026-04-10T20:35:53+00:00'

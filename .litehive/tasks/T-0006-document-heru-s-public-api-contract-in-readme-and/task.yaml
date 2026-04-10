@@ -7,15 +7,15 @@ task_type: null
 model: null
 mode: implementation
 pipeline_mode: full
-status: in_progress
+status: done
 flag_reason: null
 flag_count: 0
-pipeline_status: commit_to_git
+pipeline_status: done
 priority: medium
 pm_complexity: simple
 planned_effort: s
 created_at: '2026-04-10T18:53:09+00:00'
-updated_at: '2026-04-10T20:26:15+00:00'
+updated_at: '2026-04-10T20:26:17+00:00'
 goal: heru is used by litehive and (per the vision) by other callers via 'pip install
   heru' or 'heru <engine> <prompt>'. Without a clear public API boundary, every identifier
   looks stable and any change is scary. Explicitly document which classes, methods,
@@ -71,9 +71,9 @@ subagents:
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0006 document-heru-s-public-api-contract-in-readme-and'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
+  commit_sha: 10f75dacf06438400bf80fcd111f4c9dd711cfd2
+  checkpoint_base_sha: fc3eec40b078184e7aa308b5f7df3d5ee6705284
+  checkpoint_attempts: 1
   rolled_back_checkpoint_attempt: null
   merge_agent_attempts: 0
   worktree_path: null

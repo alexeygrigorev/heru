@@ -1,0 +1,57 @@
+task_id: T-0007
+step: accepting
+verdict: pass
+source: agent
+summary: 'Reviewed T-0007 against the acceptance criteria and verified the result
+  in the current workspace. Confirmed tests/contract/ now exists and is picked up
+  by default pytest discovery, with 59 collected cases across 30 test functions covering
+  the public API surface called out in scope: heru.get_engine/ENGINE_CHOICES, ExternalCLIAdapter
+  and CLIInvocation/CLIExecutionResult behavior, each public adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract, continue-latest argv mapping, and public heru.types models including LiveTimeline.recompute_counts
+  and RuntimeEngineContinuation.resume_id. Spot-checked the new contract files and
+  confirmed they are fixture/stub based only: no litehive imports, no network, and
+  no real engine subprocesses. Confirmed README explicitly documents tests/contract/
+  as the standalone ''thou shalt not break'' suite and states that changing assertions
+  there is a semver-major change requiring major version bump, CHANGELOG entry, and
+  migration note. Fresh verification run as reviewer: uv run pytest --collect-only
+  -q tests/contract -> 59 tests collected; uv run pytest -q tests/contract -> 59 passed
+  in 0.06s; uv run pytest -q -> 232 passed in 4.52s; cd ~/git/litehive && uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q -> 197 passed, 3 warnings in 16.20s. Verdict: pass.'
+feedback: 'Reviewed T-0007 against the acceptance criteria and verified the result
+  in the current workspace. Confirmed tests/contract/ now exists and is picked up
+  by default pytest discovery, with 59 collected cases across 30 test functions covering
+  the public API surface called out in scope: heru.get_engine/ENGINE_CHOICES, ExternalCLIAdapter
+  and CLIInvocation/CLIExecutionResult behavior, each public adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract, continue-latest argv mapping, and public heru.types models including LiveTimeline.recompute_counts
+  and RuntimeEngineContinuation.resume_id. Spot-checked the new contract files and
+  confirmed they are fixture/stub based only: no litehive imports, no network, and
+  no real engine subprocesses. Confirmed README explicitly documents tests/contract/
+  as the standalone ''thou shalt not break'' suite and states that changing assertions
+  there is a semver-major change requiring major version bump, CHANGELOG entry, and
+  migration note. Fresh verification run as reviewer: uv run pytest --collect-only
+  -q tests/contract -> 59 tests collected; uv run pytest -q tests/contract -> 59 passed
+  in 0.06s; uv run pytest -q -> 232 passed in 4.52s; cd ~/git/litehive && uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q -> 197 passed, 3 warnings in 16.20s. Verdict: pass.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 58
+hook_results: []
+created_at: '2026-04-10T20:38:30+00:00'

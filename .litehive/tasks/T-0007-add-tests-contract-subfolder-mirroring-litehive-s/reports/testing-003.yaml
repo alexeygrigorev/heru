@@ -1,0 +1,57 @@
+task_id: T-0007
+step: testing
+verdict: pass
+source: agent
+summary: 'Validated T-0007. Verified tests/contract exists with 30 test functions
+  and 59 collected cases covering public entrypoints, ExternalCLIAdapter behavior,
+  each public adapter build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract, latest-resume argv mapping, and public heru.types models including LiveTimeline.recompute_counts
+  and RuntimeEngineContinuation.resume_id. Reviewed the suite and confirmed it is
+  fixture-based with stubbed subprocess/selectors only, with no litehive imports,
+  network, or real engine subprocesses. Confirmed README documents tests/contract
+  as the standalone semver-major thou-shalt-not-break suite and includes the required
+  checklist: major version bump, CHANGELOG entry, and migration note. Verification
+  evidence: uv run pytest --collect-only -q tests/contract collected 59 cases; uv
+  run pytest -q tests/contract passed with 59 passed in 0.06s; uv run pytest -q passed
+  with 232 passed in 4.48s, confirming default discovery includes the contract suite;
+  and the required litehive smoke suite passed via cd ~/git/litehive && uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q with 197 passed and 3 warnings in 16.12s. Verdict:
+  pass.'
+feedback: 'Validated T-0007. Verified tests/contract exists with 30 test functions
+  and 59 collected cases covering public entrypoints, ExternalCLIAdapter behavior,
+  each public adapter build_invocation/render_transcript/extract_usage_observation/extract_continuation
+  contract, latest-resume argv mapping, and public heru.types models including LiveTimeline.recompute_counts
+  and RuntimeEngineContinuation.resume_id. Reviewed the suite and confirmed it is
+  fixture-based with stubbed subprocess/selectors only, with no litehive imports,
+  network, or real engine subprocesses. Confirmed README documents tests/contract
+  as the standalone semver-major thou-shalt-not-break suite and includes the required
+  checklist: major version bump, CHANGELOG entry, and migration note. Verification
+  evidence: uv run pytest --collect-only -q tests/contract collected 59 cases; uv
+  run pytest -q tests/contract passed with 59 passed in 0.06s; uv run pytest -q passed
+  with 232 passed in 4.48s, confirming default discovery includes the contract suite;
+  and the required litehive smoke suite passed via cd ~/git/litehive && uv run pytest
+  tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py
+  tests/test_codex_quota.py -q with 197 passed and 3 warnings in 16.12s. Verdict:
+  pass.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 99
+hook_results: []
+created_at: '2026-04-10T20:37:32+00:00'

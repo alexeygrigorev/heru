@@ -1,8 +1,7 @@
-active_task_id: T-0006
+active_task_id: T-0007
 active_task_ids: []
 mode: implementation
 queue:
-- T-0007
 - T-0008
 pool_stop_reason: null
 next_task_number: 8

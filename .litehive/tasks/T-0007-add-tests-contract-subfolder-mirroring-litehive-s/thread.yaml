@@ -1,0 +1,207 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Grooming passed. I inspected the current heru repo state and verified\
+    \ the task is implementation-ready with a narrow scope.\n\nWhat I verified:\n\
+    - `tests/contract/` does not exist yet; current tests live directly under `tests/`.\n\
+    - Existing fixture-driven direct adapter tests already cover much of the intended\
+    \ contract surface: `tests/test_base_direct.py`, `tests/test_*_adapter_direct.py`,\
+    \ `tests/test_resume_adapters.py`, and parts of `tests/test_goz_adapter.py`.\n\
+    - `uv run pytest --collect-only -q tests` succeeds and currently collects 173\
+    \ tests, so default pytest discovery is already configured through `[tool.pytest.ini_options]\
+    \ testpaths = [\"tests\"]` in `pyproject.toml`; adding `tests/contract/` will\
+    \ automatically be picked up.\n- README already documents the stable public API\
+    \ and semver-major checklist generally, plus the litehive pre-commit hook, but\
+    \ it does not yet call out `tests/contract/` as the standalone \u201Cthou shalt\
+    \ not break\u201D suite.\n- Current gap versus acceptance criteria: there is no\
+    \ dedicated standalone contract subfolder, and I did not find dedicated tests\
+    \ for the public constructors/behaviors across the `heru.types` models listed\
+    \ in README.\n\nExecution plan for implementing:\n1. Create `tests/contract/`\
+    \ and move or mirror the existing public-API-focused direct tests into that subfolder,\
+    \ keeping them fixture-only and independent of litehive, real CLIs, network, and\
+    \ engine subprocesses beyond local stub scripts already used for `ExternalCLIAdapter.run_live`\
+    \ behavior.\n2. Add focused contract tests for the missing public type constructors\
+    \ and stable behaviors in `heru.types` (`EngineUsageObservation`, `EngineUsageWindow`,\
+    \ `UnifiedEvent`, `LiveTimeline.recompute_counts`, `RuntimeEngineContinuation.resume_id`,\
+    \ and the currently public stage-report models as needed to satisfy the documented\
+    \ public surface).\n3. Ensure the contract suite has at least 30 tests and that\
+    \ each engine adapter contract is covered for `build_invocation`, `render_transcript`,\
+    \ `extract_usage_observation`, and `extract_continuation` where that method is\
+    \ part of the adapter\u2019s public behavior.\n4. Update README with an explicit\
+    \ `tests/contract/` section stating that changing assertions there is a semver-major\
+    \ contract change requiring the T-0006 checklist: version bump in `pyproject.toml`,\
+    \ CHANGELOG entry, and migration note.\n5. Verification in implementing/testing\
+    \ should be: targeted `uv run pytest -q tests/contract`, then `uv run pytest -q`,\
+    \ then the required litehive smoke suite from `~/git/litehive` before handoff/commit\
+    \ if code changed.\n\nSuggested task shaping:\nTASK_UPDATE:\n  plan:\n    - Create\
+    \ `tests/contract/` and relocate or mirror standalone public-API contract tests\
+    \ there.\n    - Add missing contract coverage for public `heru.types` models and\
+    \ base adapter behaviors.\n    - Document `tests/contract/` in README as semver-major\
+    \ guarded contract coverage.\n    - Verify with targeted contract pytest run,\
+    \ full heru pytest run, and required litehive smoke tests after implementation.\n\
+    \  pm_complexity: moderate\n  planned_effort: m\n\nNotes for the next agent:\n\
+    - Keep scope tight: this task is about a standalone contract suite, not refactoring\
+    \ adapter internals.\n- Prefer reusing existing fixtures under `tests/fixtures/`\
+    \ and existing direct tests instead of inventing new integration scenarios.\n\
+    - Avoid moving litehive-specific assertions into heru; this suite should test\
+    \ only heru\u2019s public API surface."
+  files_changed: []
+  created_at: '2026-04-10T20:28:02+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: 'Added a standalone public-API contract suite under tests/contract/ and
+    documented it in README as the semver-major guarded ''thou shalt not break'' suite.
+    The new contract directory contains 30 test functions and 59 collected pytest
+    cases covering public entrypoints (ENGINE_CHOICES/get_engine), ExternalCLIAdapter/base
+    behaviors (build_invocation env shaping, run emit_unified, run_live inactivity
+    timeout, continuation extraction), each public adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+    contract using fixture-only inputs, latest-resume argv mapping, and the public
+    heru.types constructors/models including LiveTimeline.recompute_counts and RuntimeEngineContinuation.resume_id.
+    No litehive imports, no engine CLI calls, and no network were added in tests/contract/.
+    Verified with: uv run pytest -q tests/contract -> 59 passed in 0.10s; uv run pytest
+    -q -> 232 passed in 4.54s; cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q -> 197 passed, 3 warnings in 16.76s. Acceptance criteria met: tests/contract
+    exists and is picked up by default pytest via tests/; README now states tests/contract
+    changes are semver-major and require major version bump + CHANGELOG + migration
+    note; suite remains fixture-only and heru-standalone.'
+  files_changed: []
+  created_at: '2026-04-10T20:35:46+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: "Validated T-0007 against the testing-stage acceptance criteria. Verified\
+    \ that tests/contract/ exists and contains 30 test functions / 59 collected cases\
+    \ covering the public API surface: entrypoints (ENGINE_CHOICES/get_engine), ExternalCLIAdapter\
+    \ and CLIInvocation/CLIExecutionResult behavior, each public adapter's build_invocation/render_transcript/extract_usage_observation/extract_continuation\
+    \ contracts, latest-resume argv mapping, and public heru.types models including\
+    \ LiveTimeline.recompute_counts and RuntimeEngineContinuation.resume_id. Reviewed\
+    \ the contract tests and confirmed they use fixture-based payloads and stubbed\
+    \ subprocess/selectors only; no litehive imports, network, or real engine subprocesses\
+    \ were introduced. Confirmed README now documents tests/contract/ as the standalone\
+    \ 'thou shalt not break' semver-major suite and states the required checklist\
+    \ (major version bump, CHANGELOG entry, migration note). Verification evidence:\
+    \ tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter0-cwd0-kwargs0-expected_argv0]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter1-cwd1-kwargs1-expected_argv1]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter2-cwd2-kwargs2-expected_argv2]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter3-cwd3-kwargs3-expected_argv3]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter4-cwd4-kwargs4-expected_argv4]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_argv_shape[adapter5-cwd5-kwargs5-expected_argv5]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter0-thread-123-expected_argv0]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter1-session-123-expected_argv1]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter2-session-123-expected_argv2]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter3-session-123-expected_argv3]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter4-session-123-expected_argv4]\n\
+    tests/contract/test_adapter_contract.py::test_build_invocation_preserves_public_resume_shape[adapter5-session-123-expected_argv5]\n\
+    tests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter0-codex_stream.jsonl-Codex\
+    \ says hello again.]\ntests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter1-claude_stream.jsonl-Final\
+    \ Claude answer]\ntests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter2-copilot_stream.jsonl-Copilot\
+    \ final answer]\ntests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter3-gemini_stream.jsonl-Gemini\
+    \ text]\ntests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter4-opencode_stream.jsonl-OpenCode\
+    \ line 2]\ntests/contract/test_adapter_contract.py::test_render_transcript_extracts_assistant_text_from_fixture[adapter5-goz_stream.jsonl-Hello\
+    \ Goz]\ntests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter0-codex_stream.jsonl-openai-20-thread_id-codex-thread-123]\n\
+    tests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter1-claude_stream.jsonl-anthropic-18-session_id-claude-session-123]\n\
+    tests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter2-copilot_stream.jsonl-github-70-session_id-copilot-session-123]\n\
+    tests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter3-gemini_stream.jsonl-google-18-session_id-gemini-session-123]\n\
+    tests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter4-opencode_stream.jsonl-z.ai-11-session_id-opencode-session-123]\n\
+    tests/contract/test_adapter_contract.py::test_extract_usage_observation_and_continuation_match_fixture_contract[adapter5-goz_stream.jsonl-z.ai-9-session_id-goz-session-123]\n\
+    tests/contract/test_adapter_contract.py::test_continue_latest_maps_to_engine_native_resume_shape[codex-expected_argv0]\n\
+    tests/contract/test_adapter_contract.py::test_continue_latest_maps_to_engine_native_resume_shape[claude-expected_argv1]\n\
+    tests/contract/test_adapter_contract.py::test_continue_latest_maps_to_engine_native_resume_shape[copilot-expected_argv2]\n\
+    tests/contract/test_adapter_contract.py::test_continue_latest_maps_to_engine_native_resume_shape[gemini-expected_argv3]\n\
+    tests/contract/test_adapter_contract.py::test_continue_latest_maps_to_engine_native_resume_shape[opencode-expected_argv4]\n\
+    tests/contract/test_adapter_contract.py::test_goz_rejects_continue_latest_without_explicit_session_id\n\
+    tests/contract/test_adapter_contract.py::test_claude_large_prompt_switches_from_arg_to_stdin\n\
+    tests/contract/test_base_contract.py::test_build_invocation_returns_public_cliinvocation\n\
+    tests/contract/test_base_contract.py::test_build_invocation_env_strips_workspace_external_python_env\n\
+    tests/contract/test_base_contract.py::test_build_invocation_env_keeps_workspace_python_env\n\
+    tests/contract/test_base_contract.py::test_run_emits_unified_output_from_public_stream_adapter\n\
+    tests/contract/test_base_contract.py::test_run_live_enforces_stdout_inactivity_timeout\n\
+    tests/contract/test_base_contract.py::test_extract_continuation_reads_public_runtime_handle\n\
+    tests/contract/test_entrypoints_contract.py::test_engine_choices_lists_all_supported_public_engines\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[claude-ClaudeCLIAdapter]\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[codex-CodexCLIAdapter]\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[copilot-CopilotCLIAdapter]\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[gemini-GeminiCLIAdapter]\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[goz-GozCLIAdapter]\n\
+    tests/contract/test_entrypoints_contract.py::test_get_engine_resolves_stable_public_adapter_instances[opencode-OpenCodeAdapter]\n\
+    tests/contract/test_types_contract.py::test_engine_usage_window_preserves_constructor_fields\n\
+    tests/contract/test_types_contract.py::test_engine_usage_observation_defaults_metadata_and_timestamp\n\
+    tests/contract/test_types_contract.py::test_unified_event_preserves_public_schema_fields\n\
+    tests/contract/test_types_contract.py::test_live_event_is_a_unified_event_shape\n\
+    tests/contract/test_types_contract.py::test_live_timeline_recompute_counts_summarizes_by_kind\n\
+    tests/contract/test_types_contract.py::test_runtime_engine_continuation_prefers_session_id_for_resume_id\n\
+    tests/contract/test_types_contract.py::test_runtime_engine_continuation_falls_back_to_thread_id_for_resume_id\n\
+    tests/contract/test_types_contract.py::test_resource_limit_event_preserves_optional_measurements\n\
+    tests/contract/test_types_contract.py::test_subagent_ref_defaults_public_status_and_sandbox_fields\n\
+    tests/contract/test_types_contract.py::test_stage_result_tests_defaults_to_zero_counts\n\
+    tests/contract/test_types_contract.py::test_task_update_submission_accepts_public_planning_fields\n\
+    tests/contract/test_types_contract.py::test_stage_result_submission_normalizes_accept_to_pass\n\
+    tests/contract/test_types_contract.py::test_stage_result_submission_normalizes_fail_to_reject\n\
+    tests/contract/test_types_contract.py::test_stage_result_submission_forbids_unknown_fields\n\
+    tests/contract/test_types_contract.py::test_stage_report_preserves_public_defaults\n\
+    \n59 tests collected in 0.02s collected 59 cases; ...........................................................\
+    \              [100%]\n59 passed in 0.06s passed with 59 passed in 0.06s; ........................................................................\
+    \ [ 31%]\n........................................................................\
+    \ [ 62%]\n........................................................................\
+    \ [ 93%]\n................                                                   \
+    \      [100%]\n232 passed in 4.49s passed with 232 passed in 4.48s, proving default\
+    \ pytest discovery includes the contract suite; downstream editable-install contract\
+    \ remained intact because ........................................................................\
+    \ [ 36%]\n........................................................................\
+    \ [ 73%]\n.....................................................              \
+    \      [100%]\n=============================== warnings summary ===============================\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n.venv/lib/python3.12/site-packages/typer/params.py:946\n\
+    .venv/lib/python3.12/site-packages/typer/params.py:946\n  /home/alexey/git/litehive/.venv/lib/python3.12/site-packages/typer/params.py:946:\
+    \ DeprecationWarning: The 'is_flag' and 'flag_value' parameters are not supported\
+    \ by Typer and will be removed entirely in a future release.\n    return OptionInfo(\n\
+    \n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n197\
+    \ passed, 3 warnings in 15.64s passed with 197 passed, 3 warnings in 16.12s. Verdict:\
+    \ pass."
+  files_changed: []
+  created_at: '2026-04-10T20:37:23+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Validated T-0007. Verified tests/contract exists with 30 test functions
+    and 59 collected cases covering public entrypoints, ExternalCLIAdapter behavior,
+    each public adapter build_invocation/render_transcript/extract_usage_observation/extract_continuation
+    contract, latest-resume argv mapping, and public heru.types models including LiveTimeline.recompute_counts
+    and RuntimeEngineContinuation.resume_id. Reviewed the suite and confirmed it is
+    fixture-based with stubbed subprocess/selectors only, with no litehive imports,
+    network, or real engine subprocesses. Confirmed README documents tests/contract
+    as the standalone semver-major thou-shalt-not-break suite and includes the required
+    checklist: major version bump, CHANGELOG entry, and migration note. Verification
+    evidence: uv run pytest --collect-only -q tests/contract collected 59 cases; uv
+    run pytest -q tests/contract passed with 59 passed in 0.06s; uv run pytest -q
+    passed with 232 passed in 4.48s, confirming default discovery includes the contract
+    suite; and the required litehive smoke suite passed via cd ~/git/litehive && uv
+    run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q with 197 passed and 3 warnings
+    in 16.12s. Verdict: pass.'
+  files_changed: []
+  created_at: '2026-04-10T20:37:25+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Reviewed T-0007 against the acceptance criteria and verified the result
+    in the current workspace. Confirmed tests/contract/ now exists and is picked up
+    by default pytest discovery, with 59 collected cases across 30 test functions
+    covering the public API surface called out in scope: heru.get_engine/ENGINE_CHOICES,
+    ExternalCLIAdapter and CLIInvocation/CLIExecutionResult behavior, each public
+    adapter''s build_invocation/render_transcript/extract_usage_observation/extract_continuation
+    contract, continue-latest argv mapping, and public heru.types models including
+    LiveTimeline.recompute_counts and RuntimeEngineContinuation.resume_id. Spot-checked
+    the new contract files and confirmed they are fixture/stub based only: no litehive
+    imports, no network, and no real engine subprocesses. Confirmed README explicitly
+    documents tests/contract/ as the standalone ''thou shalt not break'' suite and
+    states that changing assertions there is a semver-major change requiring major
+    version bump, CHANGELOG entry, and migration note. Fresh verification run as reviewer:
+    uv run pytest --collect-only -q tests/contract -> 59 tests collected; uv run pytest
+    -q tests/contract -> 59 passed in 0.06s; uv run pytest -q -> 232 passed in 4.52s;
+    cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed, 3 warnings
+    in 16.20s. Verdict: pass.'
+  files_changed: []
+  created_at: '2026-04-10T20:38:24+00:00'
