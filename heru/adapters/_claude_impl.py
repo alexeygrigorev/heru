@@ -22,7 +22,13 @@ def claude_stream_event_adapter() -> StreamEventAdapter:
         final_messages=final_messages,
         errors=errors,
         live_events=live_events,
+        continuation_id=claude_continuation_id,
     )
+
+
+def claude_continuation_id(payload: dict[str, object]) -> str | None:
+    continuation = claude_continuation(payload)
+    return continuation.resume_id if continuation is not None else None
 
 
 def extract_claude_text_delta_fallback(stdout: str) -> list[str]:

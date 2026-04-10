@@ -20,7 +20,7 @@ from heru.base import (
     ExternalCLIAdapter,
     parse_stage_report_text,
 )
-from heru.types import RuntimeEngineContinuation
+from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 logger = logging.getLogger("litehive.agents.adapters.codex")
@@ -138,6 +138,15 @@ class CodexCLIAdapter(ExternalCLIAdapter):
 
     def stream_event_adapter(self):
         return codex_stream_event_adapter()
+
+    def iter_native_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return iter_codex_payloads(stdout)
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        return super().translate_native_event(native_payload)
 
     def extract_continuation(
         self,

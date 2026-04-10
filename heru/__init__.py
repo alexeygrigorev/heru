@@ -36,6 +36,7 @@ from heru.types import (
     LiveEvent,
     LiveTimeline,
     RuntimeEngineContinuation,
+    UnifiedEvent,
 )
 
 ENGINE_ADAPTER_TYPES: tuple[type[ExternalCLIAdapter], ...] = (
@@ -123,6 +124,7 @@ __all__ = [
     "RetryableExecutionFailure",
     "RuntimeEngineContinuation",
     "StreamEventAdapter",
+    "UnifiedEvent",
     "_ENGINE_LIMIT_PATTERNS",
     "_EXECUTION_INTERRUPTION_PATTERNS",
     "_RETRYABLE_EXECUTION_PATTERNS",

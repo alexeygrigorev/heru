@@ -225,7 +225,16 @@ def codex_continuation(payload: dict[str, object]) -> RuntimeEngineContinuation 
 
 
 def codex_stream_event_adapter() -> StreamEventAdapter:
-    return StreamEventAdapter(unwrap_event=unwrap_stream_event, live_events=codex_live_events)
+    return StreamEventAdapter(
+        unwrap_event=unwrap_stream_event,
+        live_events=codex_live_events,
+        continuation_id=codex_continuation_id,
+    )
+
+
+def codex_continuation_id(payload: dict[str, object]) -> str | None:
+    continuation = codex_continuation(payload)
+    return continuation.resume_id if continuation is not None else None
 
 
 def codex_live_events(payload: dict[str, object]) -> list[LiveEvent]:

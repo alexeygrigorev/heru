@@ -1,7 +1,7 @@
 # heru
 
-**Unified headless CLI for coding agents.** One interface, one JSONL output
-format, one resume mechanism — regardless of which underlying agent you use:
+**Unified headless CLI for coding agents.** One interface, one JSONL event
+envelope, one resume mechanism — regardless of which underlying agent you use:
 
 - [codex](https://github.com/openai/codex) (OpenAI)
 - [claude](https://github.com/anthropics/claude-code) (Anthropic)
@@ -34,10 +34,32 @@ heru codex --resume <session-id> "now also run the tests"
 heru claude "find the bug in src/foo.py"
 ```
 
-All output is streamed as a unified JSONL format — one event shape
-regardless of the underlying engine. The underlying engine's native
-format is preserved in the raw payload for cases where you need the
-detail.
+All output is streamed as unified JSONL by default. Pass `--raw` to get
+the engine's native JSON/JSONL stream back for debugging.
+
+## Unified Event Schema
+
+Each stdout line is a `UnifiedEvent` JSON object with these common fields:
+
+- `kind`: `message`, `tool_call`, `tool_result`, `usage`, `error`, `status`, or `continuation`
+- `engine`: the emitting engine name (`codex`, `claude`, `copilot`, `gemini`, `opencode`, `goz`)
+- `sequence`: zero-based event order within the run
+- `timestamp`: ISO-8601 timestamp for the emitted event
+- `role`: optional role (`assistant`, `user`, `system`)
+- `content`: assistant or status text when present
+- `tool_name`: tool identifier for tool-related events
+- `tool_input`: serialized tool input when present
+- `tool_output`: serialized tool output when present
+- `error`: error text when present
+- `usage_delta`: per-event usage fields extracted from the provider payload
+- `continuation_id`: session/thread identifier when the engine emits one
+- `raw`: the original provider-native payload
+
+Example:
+
+```json
+{"kind":"message","engine":"claude","sequence":0,"timestamp":"2026-04-10T19:00:00+00:00","role":"assistant","content":"Done.","raw":{"type":"assistant","message":{"content":"Done."}}}
+```
 
 ## Install
 
@@ -54,8 +76,8 @@ uv add heru
 heru as its engine execution layer. Several things from the vision
 above are still in flight:
 
-- [ ] Unified JSONL output format — currently each adapter streams the
-      engine's native events; normalizing to a single envelope is next.
+- [x] Unified JSONL output format — `heru` now emits one documented
+      event envelope across all supported engines by default.
 - [ ] Unified `--resume` across all engines — adapters all accept a
       `resume_session_id` parameter, but the CLI layer hasn't been
       unified to match.

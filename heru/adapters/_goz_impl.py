@@ -120,7 +120,12 @@ def goz_error_details(
 
 
 def goz_stream_event_adapter() -> StreamEventAdapter:
-    return StreamEventAdapter(live_events=live_events)
+    return StreamEventAdapter(live_events=live_events, continuation_id=goz_continuation_id)
+
+
+def goz_continuation_id(payload: dict[str, object]) -> str | None:
+    continuation = goz_continuation(payload)
+    return continuation.resume_id if continuation is not None else None
 
 
 def live_events(payload: dict[str, object]) -> list[LiveEvent]:

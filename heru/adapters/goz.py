@@ -13,7 +13,7 @@ from heru.adapters._goz_impl import (
 )
 from heru.adapters.common import classify_execution_limit
 from heru.base import CLIExecutionResult, ExternalCLIAdapter, iter_jsonl_payloads
-from heru.types import RuntimeEngineContinuation
+from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 _goz_extract_text = goz_extract_text
 
@@ -89,6 +89,12 @@ class GozCLIAdapter(ExternalCLIAdapter):
 
     def stream_event_adapter(self):
         return goz_stream_event_adapter()
+
+    def translate_native_event(
+        self,
+        native_payload: dict[str, object],
+    ) -> UnifiedEvent | None:
+        return super().translate_native_event(native_payload)
 
     def extract_continuation(
         self,
