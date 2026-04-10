@@ -1,0 +1,58 @@
+task_id: T-0002
+step: implementing
+verdict: pass
+source: agent
+summary: Implemented a Typer-based heru CLI with one subcommand per engine generated
+  from ENGINE_CHOICES, so heru <engine> <prompt> now dispatches through shared option
+  handling for --cwd, --model, --max-turns, --resume, and --raw while preserving heru.main.main(argv)
+  as the entrypoint. Kept the legacy heru <prompt> --engine <engine> path via a compatibility
+  parser that emits a deprecation warning on stderr and still forwards the same run
+  arguments. Added CLI coverage across every registered engine subcommand with fake
+  adapters, including option forwarding, raw vs unified output, exit code/stdout/stderr
+  pass-through, root help, per-engine help, and legacy warning behavior. Updated README
+  usage/status and added the Typer runtime dependency with the lockfile refresh from
+  uv sync --extra dev. Verified with uv run pytest tests/test_heru_cli.py -q (21 passed),
+  uv run pytest -q (52 passed), and the required litehive smoke suite tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q (197 passed) when run with PYTHONPATH pointing at this heru worktree so litehive
+  exercised the changed code.
+feedback: Implemented a Typer-based heru CLI with one subcommand per engine generated
+  from ENGINE_CHOICES, so heru <engine> <prompt> now dispatches through shared option
+  handling for --cwd, --model, --max-turns, --resume, and --raw while preserving heru.main.main(argv)
+  as the entrypoint. Kept the legacy heru <prompt> --engine <engine> path via a compatibility
+  parser that emits a deprecation warning on stderr and still forwards the same run
+  arguments. Added CLI coverage across every registered engine subcommand with fake
+  adapters, including option forwarding, raw vs unified output, exit code/stdout/stderr
+  pass-through, root help, per-engine help, and legacy warning behavior. Updated README
+  usage/status and added the Typer runtime dependency with the lockfile refresh from
+  uv sync --extra dev. Verified with uv run pytest tests/test_heru_cli.py -q (21 passed),
+  uv run pytest -q (52 passed), and the required litehive smoke suite tests/test_runner_workflow.py
+  tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+  -q (197 passed) when run with PYTHONPATH pointing at this heru worktree so litehive
+  exercised the changed code.
+submitted_via_cli: true
+files_changed:
+- README.md
+- heru/main.py
+- pyproject.toml
+- tests/test_heru_cli.py
+- uv.lock
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 312
+hook_results: []
+created_at: '2026-04-10T19:23:57+00:00'

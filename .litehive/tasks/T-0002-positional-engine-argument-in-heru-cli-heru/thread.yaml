@@ -1,0 +1,137 @@
+- role: planner
+  step: grooming
+  verdict: pass
+  message: "Verified repo state without code changes. Current CLI in heru/main.py\
+    \ is argparse-based with shape `heru <prompt> --engine <engine>`; it forwards\
+    \ `--model`, `--cwd`, `--max-turns`, `--resume-session-id`, and `--raw` into `engine.run(...)`.\
+    \ README.md already documents the target positional form (`heru codex <prompt>`),\
+    \ so docs and code are currently out of sync. Current CLI coverage in tests/test_heru_cli.py\
+    \ only exercises the legacy `--engine` path. pyproject.toml currently has no Typer/Click\
+    \ dependency, so this task includes an explicit runtime dependency change.\n\n\
+    No tests were run in grooming because this stage is repo inspection and task shaping\
+    \ only.\n\nPlanner verdict: pass grooming. The task is well-scoped for implementation,\
+    \ but the acceptance criteria need one compatibility detail called out: the desired\
+    \ public flag is `--resume`, while the current code and tests use `--resume-session-id`.\
+    \ Implement the new shared `--resume` option across all engine subcommands, and\
+    \ if cost is low keep `--resume-session-id` as a hidden deprecated alias for one\
+    \ release to avoid breaking existing callers.\n\nRecommended implementation plan:\n\
+    1. Replace the argparse-only CLI shape with a Typer app that registers one subcommand\
+    \ per engine from the existing registry / ENGINE_CHOICES instead of duplicating\
+    \ engine names.\n2. Keep `heru.main.main(argv)` as the console entrypoint and\
+    \ preserve current exit-code/stdout/stderr pass-through behavior.\n3. Add a compatibility\
+    \ path for legacy invocations of `heru <prompt> --engine <engine>` inside `main(argv)`\
+    \ and emit a deprecation warning to stderr before dispatching.\n4. Share one option\
+    \ bundle across all engine subcommands for `--cwd`, `--model`, `--max-turns`,\
+    \ `--resume`, and `--raw`.\n5. Expand CLI tests to cover every registered engine\
+    \ subcommand with fake adapters, plus `heru --help`, `heru <engine> --help`, raw\
+    \ vs unified output, exit code propagation, and deprecated legacy-path warning\
+    \ behavior.\n6. Update README usage/help examples and add the minimal explicit\
+    \ runtime dependency changes needed for Typer/Click.\n\nSizing recommendation:\
+    \ PM complexity `moderate`, planned effort `m`, task type `refactor`.\n\nI attempted\
+    \ to persist these shaping updates with `litehive task update T-0002`, but Litehive\
+    \ rejected the mutation because the runner currently holds the task state lock\
+    \ (`runtime.execution_status=running`). Carry this TASK_UPDATE forward manually\
+    \ if needed:\n\nTASK_UPDATE:\n  pm_complexity: moderate\n  planned_effort: m\n\
+    \  task_type: refactor\n  acceptance_criteria:\n    - For every registered engine\
+    \ in ENGINE_CHOICES, `heru <engine> <prompt>` invokes the matching adapter and\
+    \ forwards the prompt and common options correctly.\n    - Each engine subcommand\
+    \ accepts the shared options `--cwd`, `--model`, `--max-turns`, `--resume`, and\
+    \ `--raw`, and the engine-specific help shows that shared option set.\n    - `heru\
+    \ --help` lists all registered engines as subcommands, and `heru <engine> --help`\
+    \ succeeds for each engine.\n    - The legacy form `heru <prompt> --engine <engine>`\
+    \ still works for one release and emits a deprecation warning to stderr before\
+    \ delegating to the selected engine.\n    - CLI tests use fake adapters to cover\
+    \ every registered engine subcommand plus the deprecated entrypoint, asserting\
+    \ forwarded argv/options, warning behavior, raw vs unified output handling, and\
+    \ exit code.\n  constraints:\n    - Keep changes scoped to the CLI entrypoint,\
+    \ packaging, documentation, and focused CLI tests; do not change adapter semantics\
+    \ except where needed to normalize CLI option names.\n    - Preserve `heru.main.main(argv)`\
+    \ as the console entrypoint and keep the current exit-code/stdout/stderr pass-through\
+    \ behavior.\n    - Generate engine subcommands from the existing registry or ENGINE_CHOICES\
+    \ rather than duplicating engine names in multiple places.\n  plan:\n    - Inspect\
+    \ the current argparse CLI, existing CLI tests, and engine registry to preserve\
+    \ the public contract while introducing positional engine subcommands.\n    -\
+    \ Replace the argparse-only shape with a Typer-based CLI that registers one subcommand\
+    \ per engine and shares the common option bundle.\n    - Keep a compatibility\
+    \ path for the legacy `--engine` form inside `main(argv)` and emit a deprecation\
+    \ warning on stderr.\n    - Normalize the public resume flag to `--resume`; if\
+    \ implementation cost is low, retain `--resume-session-id` as a hidden deprecated\
+    \ alias for one release to avoid breaking existing callers.\n    - Expand CLI\
+    \ tests to cover every registered engine subcommand, help output, raw/unified\
+    \ mode, and the deprecated alias path using fake adapters.\n    - Update README\
+    \ usage examples and add the minimal explicit runtime dependency changes required\
+    \ for Typer/Click."
+  files_changed: []
+  created_at: '2026-04-10T19:18:36+00:00'
+- role: swe
+  step: implementing
+  verdict: pass
+  message: Implemented a Typer-based heru CLI with one subcommand per engine generated
+    from ENGINE_CHOICES, so heru <engine> <prompt> now dispatches through shared option
+    handling for --cwd, --model, --max-turns, --resume, and --raw while preserving
+    heru.main.main(argv) as the entrypoint. Kept the legacy heru <prompt> --engine
+    <engine> path via a compatibility parser that emits a deprecation warning on stderr
+    and still forwards the same run arguments. Added CLI coverage across every registered
+    engine subcommand with fake adapters, including option forwarding, raw vs unified
+    output, exit code/stdout/stderr pass-through, root help, per-engine help, and
+    legacy warning behavior. Updated README usage/status and added the Typer runtime
+    dependency with the lockfile refresh from uv sync --extra dev. Verified with uv
+    run pytest tests/test_heru_cli.py -q (21 passed), uv run pytest -q (52 passed),
+    and the required litehive smoke suite tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q (197 passed) when run with
+    PYTHONPATH pointing at this heru worktree so litehive exercised the changed code.
+  files_changed: []
+  created_at: '2026-04-10T19:23:44+00:00'
+- role: qa
+  step: testing
+  verdict: pass
+  message: 'Validated the positional-engine Typer CLI end to end. Inspected heru/main.py,
+    tests/test_heru_cli.py, README.md, and pyproject.toml: engine subcommands are
+    generated from ENGINE_CHOICES, shared options are exposed on each subcommand (--cwd,
+    --model, --max-turns, --resume, --raw), main(argv) remains the entrypoint, and
+    the legacy `heru <prompt> --engine <engine>` path still dispatches through a compatibility
+    parser that prints a deprecation warning to stderr. Focused CLI tests use fake
+    adapters and assert prompt/argv forwarding, cwd/model/max-turns/resume forwarding,
+    raw vs unified behavior, per-engine help, root help, stderr/stdout pass-through,
+    and exit-code propagation across every registered engine.
+
+
+    Verification run: `uv run pytest tests/test_heru_cli.py -q` -> 21 passed. Manual
+    checks: `uv run python -c "from heru.main import main; raise SystemExit(main([''--help'']))"`
+    listed all registered engines as subcommands; `uv run python -c "from heru.main
+    import main; raise SystemExit(main([''codex'',''--help'']))"` showed the shared
+    option set; a direct monkeypatched legacy invocation confirmed the deprecation
+    warning on stderr and forwarding of `--resume-session-id` into `resume_session_id`.
+
+
+    Contract verification: `cd ~/git/litehive && PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0002-positional-engine-argument-in-heru-cli-heru
+    uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+    tests/test_heru_cli.py tests/test_codex_quota.py -q` -> 197 passed. Acceptance
+    criteria satisfied.'
+  files_changed: []
+  created_at: '2026-04-10T19:26:01+00:00'
+- role: reviewer
+  step: accepting
+  verdict: pass
+  message: 'Accepted. Verified the end-user CLI outcome against the task acceptance
+    criteria in both heru and downstream litehive. Inspected heru/main.py and confirmed
+    the entrypoint is now Typer-based, registers one subcommand per engine from ENGINE_CHOICES,
+    and shares the common options --cwd, --model, --max-turns, --resume, and --raw
+    across engine commands while preserving heru.main.main(argv) as the console entrypoint.
+    Confirmed the legacy form heru <prompt> --engine <engine> still routes through
+    a compatibility parser, accepts --resume-session-id as the deprecated alias path,
+    and emits a deprecation warning to stderr before dispatching. Inspected tests/test_heru_cli.py
+    and confirmed focused fake-adapter coverage for every registered engine subcommand,
+    including argv/option forwarding, raw versus unified output handling, stdout/stderr
+    pass-through, exit-code propagation, root help, per-engine help, and the deprecated
+    legacy invocation. Verification run in heru: uv run pytest tests/test_heru_cli.py
+    -q -> 21 passed. Manual help spot checks: uv run python -c "from heru.main import
+    main; raise SystemExit(main([''--help'']))" listed all engines as subcommands,
+    and uv run python -c "from heru.main import main; raise SystemExit(main([''codex'',''--help'']))"
+    showed the shared option set. Required downstream contract verification in litehive
+    with this worktree on PYTHONPATH: uv run pytest tests/test_runner_workflow.py
+    tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py
+    -q -> 197 passed. Evidence is sufficient and the acceptance criteria are met without
+    observed regressions.'
+  files_changed: []
+  created_at: '2026-04-10T19:27:49+00:00'

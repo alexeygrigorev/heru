@@ -1,4 +1,4 @@
-Task: T-0001 Unified JSONL event output across all engines
+Task: T-0002 Positional engine argument in heru CLI: heru <engine> <prompt>
 Stage: accepting
 Stage owner: reviewer
 Process profile: Python
@@ -271,22 +271,21 @@ Act as the reviewer: validate the end-user outcome against the acceptance criter
 Be strict about regression detection, evidence quality, and final done versus not-done judgment.
 
 Goal:
-Today each heru adapter (codex, claude, copilot, gemini, opencode, goz) streams its engine's native JSONL payloads directly to stdout. Callers have to parse 6 different event schemas to extract agent messages, tool calls, tool outputs, errors, and usage. Define a single unified event envelope that heru emits regardless of the underlying engine. Each adapter translates its native events into the unified shape before streaming. The native payload stays embedded as a 'raw' field for consumers that need engine-specific detail.
+Current CLI is 'heru <prompt> --engine codex'. The vision is 'heru codex <prompt>' with the engine as a positional subcommand. Switch to a Typer-based CLI where each engine is a registered subcommand that shares common options (--cwd, --resume, --model, --max-turns). The old form can stay for one release as a deprecated alias.
 
 Acceptance criteria:
-- Define a UnifiedEvent schema (pydantic model) with fields like: kind (message|tool_call|tool_result|usage|error|status|continuation), engine, sequence, timestamp, role, content, tool_name, tool_input, tool_output, error, usage_delta, continuation_id, raw (the original native payload)
-- Each adapter implements a translate_native_event(native_payload) -> UnifiedEvent | None method that maps engine-specific events to the unified shape
-- ExternalCLIAdapter.run gains an emit_unified mode that streams UnifiedEvent JSONL to stdout instead of native payloads
-- heru CLI defaults to emit_unified output; a --raw flag opts back into native passthrough for debugging
-- Unit tests per adapter with fixture-based native event samples asserting the translated UnifiedEvent shape
-- Docs section in README.md describing the unified event schema
+- 'heru codex ship it', 'heru claude ship it', etc. all work and invoke the correct engine
+- Common options (--cwd, --model, --max-turns, --resume, --raw) are shared across all engine subcommands
+- 'heru --help' lists all registered engines as subcommands with their own help
+- The old 'heru <prompt> --engine X' form still works but prints a deprecation warning on stderr
+- CLI tests cover each engine subcommand with a fake engine adapter, asserting argv forwarding and exit code
 
 Plan:
 - No plan defined.
 
 PM sizing:
-- Current PM complexity: moderate
-- Current planned effort: m
+- Current PM complexity: simple
+- Current planned effort: s
 
 Constraints:
 - Keep changes scoped to the task.
@@ -294,50 +293,60 @@ Constraints:
 
 Discussion thread:
 
---- [2026-04-10T19:02:12+00:00] planner (grooming) — pass ---
-Verified by repo inspection only; no code changes and no tests run in grooming. Current state: `heru.main` forwards `execution.stdout` verbatim, `ExternalCLIAdapter.run` only returns native stdout/stderr, and each adapter already exposes engine-specific `stream_event_adapter()` hooks that normalize native payloads into internal `LiveEvent` values for timeline extraction. README also still marks unified JSONL output as not yet done. This confirms the problem statement and shows the narrowest implementation path is to promote that existing normalization layer into the public streamed contract rather than build a second event-mapping stack.
+--- [2026-04-10T19:18:36+00:00] planner (grooming) — pass ---
+Verified repo state without code changes. Current CLI in heru/main.py is argparse-based with shape `heru <prompt> --engine <engine>`; it forwards `--model`, `--cwd`, `--max-turns`, `--resume-session-id`, and `--raw` into `engine.run(...)`. README.md already documents the target positional form (`heru codex <prompt>`), so docs and code are currently out of sync. Current CLI coverage in tests/test_heru_cli.py only exercises the legacy `--engine` path. pyproject.toml currently has no Typer/Click dependency, so this task includes an explicit runtime dependency change.
 
-Implementation plan:
-1. Add a public unified streamed event model in `heru/types.py` and export it from `heru/__init__.py`. Prefer extending/reusing the existing `LiveEvent` shape or clearly replacing it, because adding a second overlapping public event model would create unnecessary semver surface.
-2. Add a public per-adapter translation hook on `ExternalCLIAdapter` / adapters that converts one native payload into zero or one unified event envelope, preserving the original payload under `raw` and emitting continuation/usage/status events where present.
-3. Add an `emit_unified` path in `ExternalCLIAdapter.run` and `run_live` that rewrites JSONL stdout into unified JSONL while leaving `--raw` passthrough available for debugging. Codex needs special handling because its payload parser accepts multiline JSON objects rather than strict one-line JSONL.
-4. Update `heru.main` so unified output is the default CLI behavior and `--raw` disables translation.
-5. Add focused adapter tests with fixture-style native payload samples for codex, claude, copilot, gemini, opencode, and goz, plus CLI tests for default unified output vs `--raw` passthrough.
-6. Update README to document the public unified event schema and note that `raw` contains the provider-native payload.
-7. In implementing/testing stages, run targeted `uv run pytest` for the touched adapter/CLI tests, then the required Litehive contract smoke suite before finishing the task.
+No tests were run in grooming because this stage is repo inspection and task shaping only.
 
-Scope notes and risks:
-- This is a semver-relevant public API change because it adds a new public pydantic model and changes default CLI/stdout behavior. Keep signatures backwards compatible where possible and document the behavior shift.
-- The task should stay inside heru. No Litehive orchestration, stage-report, or routing changes are needed.
-- Acceptance criterion wording should be interpreted as observable outcomes, not a mandatory internal shape. The important observable is that every engine can emit one documented unified JSONL envelope with native payload preserved in `raw`.
+Planner verdict: pass grooming. The task is well-scoped for implementation, but the acceptance criteria need one compatibility detail called out: the desired public flag is `--resume`, while the current code and tests use `--resume-session-id`. Implement the new shared `--resume` option across all engine subcommands, and if cost is low keep `--resume-session-id` as a hidden deprecated alias for one release to avoid breaking existing callers.
+
+Recommended implementation plan:
+1. Replace the argparse-only CLI shape with a Typer app that registers one subcommand per engine from the existing registry / ENGINE_CHOICES instead of duplicating engine names.
+2. Keep `heru.main.main(argv)` as the console entrypoint and preserve current exit-code/stdout/stderr pass-through behavior.
+3. Add a compatibility path for legacy invocations of `heru <prompt> --engine <engine>` inside `main(argv)` and emit a deprecation warning to stderr before dispatching.
+4. Share one option bundle across all engine subcommands for `--cwd`, `--model`, `--max-turns`, `--resume`, and `--raw`.
+5. Expand CLI tests to cover every registered engine subcommand with fake adapters, plus `heru --help`, `heru <engine> --help`, raw vs unified output, exit code propagation, and deprecated legacy-path warning behavior.
+6. Update README usage/help examples and add the minimal explicit runtime dependency changes needed for Typer/Click.
+
+Sizing recommendation: PM complexity `moderate`, planned effort `m`, task type `refactor`.
+
+I attempted to persist these shaping updates with `litehive task update T-0002`, but Litehive rejected the mutation because the runner currently holds the task state lock (`runtime.execution_status=running`). Carry this TASK_UPDATE forward manually if needed:
 
 TASK_UPDATE:
-```yaml
-goal: Emit one documented, engine-agnostic JSONL event envelope from heru by default while preserving each provider payload under `raw` and keeping a `--raw` escape hatch for native passthrough.
-acceptance_criteria:
-  - Running `heru --engine <engine> <prompt>` emits unified JSONL events for every supported engine (`codex`, `claude`, `copilot`, `gemini`, `opencode`, `goz`) instead of provider-native payloads by default.
-  - Each unified event includes the common envelope fields needed by callers to consume messages, tool calls, tool results, usage, errors, status, and continuation data, and preserves the original provider payload under `raw`.
-  - The adapter layer exposes a single native-payload-to-unified-event translation path per engine, and fixture-driven unit tests verify representative native samples for each engine map to the expected unified event shape.
-  - Passing `--raw` to the heru CLI restores native stdout passthrough without changing stderr or process exit behavior.
-  - README documents the unified event schema, default CLI behavior, and the purpose of the `raw` field.
-plan:
-  - Reuse the existing stream-event parsing logic as the basis for a public unified event envelope instead of introducing a second independent normalization stack.
-  - Add unified event emission hooks in the base adapter run path and expose the new schema from the public package surface.
-  - Cover adapter translation and CLI default/`--raw` behavior with focused pytest tests, then run the Litehive smoke suite before completion.
-pm_complexity: moderate
-planned_effort: m
-```
+  pm_complexity: moderate
+  planned_effort: m
+  task_type: refactor
+  acceptance_criteria:
+    - For every registered engine in ENGINE_CHOICES, `heru <engine> <prompt>` invokes the matching adapter and forwards the prompt and common options correctly.
+    - Each engine subcommand accepts the shared options `--cwd`, `--model`, `--max-turns`, `--resume`, and `--raw`, and the engine-specific help shows that shared option set.
+    - `heru --help` lists all registered engines as subcommands, and `heru <engine> --help` succeeds for each engine.
+    - The legacy form `heru <prompt> --engine <engine>` still works for one release and emits a deprecation warning to stderr before delegating to the selected engine.
+    - CLI tests use fake adapters to cover every registered engine subcommand plus the deprecated entrypoint, asserting forwarded argv/options, warning behavior, raw vs unified output handling, and exit code.
+  constraints:
+    - Keep changes scoped to the CLI entrypoint, packaging, documentation, and focused CLI tests; do not change adapter semantics except where needed to normalize CLI option names.
+    - Preserve `heru.main.main(argv)` as the console entrypoint and keep the current exit-code/stdout/stderr pass-through behavior.
+    - Generate engine subcommands from the existing registry or ENGINE_CHOICES rather than duplicating engine names in multiple places.
+  plan:
+    - Inspect the current argparse CLI, existing CLI tests, and engine registry to preserve the public contract while introducing positional engine subcommands.
+    - Replace the argparse-only shape with a Typer-based CLI that registers one subcommand per engine and shares the common option bundle.
+    - Keep a compatibility path for the legacy `--engine` form inside `main(argv)` and emit a deprecation warning on stderr.
+    - Normalize the public resume flag to `--resume`; if implementation cost is low, retain `--resume-session-id` as a hidden deprecated alias for one release to avoid breaking existing callers.
+    - Expand CLI tests to cover every registered engine subcommand, help output, raw/unified mode, and the deprecated alias path using fake adapters.
+    - Update README usage examples and add the minimal explicit runtime dependency changes required for Typer/Click.
 
+--- [2026-04-10T19:23:44+00:00] swe (implementing) — pass ---
+Implemented a Typer-based heru CLI with one subcommand per engine generated from ENGINE_CHOICES, so heru <engine> <prompt> now dispatches through shared option handling for --cwd, --model, --max-turns, --resume, and --raw while preserving heru.main.main(argv) as the entrypoint. Kept the legacy heru <prompt> --engine <engine> path via a compatibility parser that emits a deprecation warning on stderr and still forwards the same run arguments. Added CLI coverage across every registered engine subcommand with fake adapters, including option forwarding, raw vs unified output, exit code/stdout/stderr pass-through, root help, per-engine help, and legacy warning behavior. Updated README usage/status and added the Typer runtime dependency with the lockfile refresh from uv sync --extra dev. Verified with uv run pytest tests/test_heru_cli.py -q (21 passed), uv run pytest -q (52 passed), and the required litehive smoke suite tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -q (197 passed) when run with PYTHONPATH pointing at this heru worktree so litehive exercised the changed code.
 
---- [2026-04-10T19:09:36+00:00] swe (implementing) — pass ---
-Implemented unified JSONL event output across heru. Added public UnifiedEvent support in heru/types.py and exported it, extended the base adapter stream contract with continuation extraction plus native-payload translation/render_unified_output helpers, and added emit_unified handling to ExternalCLIAdapter.run/run_live. The CLI now defaults to unified output and accepts --raw to keep native passthrough. Each engine adapter now exposes translate_native_event(), codex overrides native payload iteration for multiline objects, and stream adapters emit continuation ids where available. README now documents the unified event envelope and default/--raw behavior. Added focused adapter translation coverage in tests/test_unified_events.py plus CLI coverage for unified default vs --raw in tests/test_heru_cli.py. Verified with: uv run python -m pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py (16 passed), uv run python -m pytest -q (34 passed), and the required Litehive contract smoke suite from ~/git/litehive: uv run python -m pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py (197 passed). Acceptance evidence: all supported engines now translate native payloads into a unified envelope with raw preserved, CLI default output is unified JSONL with --raw escape hatch, per-adapter tests assert representative mappings, and docs describe the schema.
+--- [2026-04-10T19:26:01+00:00] qa (testing) — pass ---
+Validated the positional-engine Typer CLI end to end. Inspected heru/main.py, tests/test_heru_cli.py, README.md, and pyproject.toml: engine subcommands are generated from ENGINE_CHOICES, shared options are exposed on each subcommand (--cwd, --model, --max-turns, --resume, --raw), main(argv) remains the entrypoint, and the legacy `heru <prompt> --engine <engine>` path still dispatches through a compatibility parser that prints a deprecation warning to stderr. Focused CLI tests use fake adapters and assert prompt/argv forwarding, cwd/model/max-turns/resume forwarding, raw vs unified behavior, per-engine help, root help, stderr/stdout pass-through, and exit-code propagation across every registered engine.
 
---- [2026-04-10T19:11:34+00:00] qa (testing) — pass ---
-Validated the unified JSONL event implementation against the acceptance criteria. Verified the public contract in heru/types.py, heru/base.py, and heru/main.py: UnifiedEvent is public, adapters translate native payloads through translate_native_event(s), ExternalCLIAdapter.run/run_live support emit_unified, and CLI defaults to unified output with --raw opting back into native passthrough. Reviewed representative adapter hooks for codex/claude/copilot/gemini/opencode/goz and confirmed each exposes the unified translation path through the shared stream adapter layer, with raw payload preservation and continuation support where emitted. Ran focused verification: uv run pytest -q tests/test_unified_events.py tests/test_heru_cli.py tests/test_goz_adapter.py -> 16 passed. This covers per-engine fixture-style translations (codex message, claude tool_call, copilot usage, gemini continuation, opencode usage+continuation, goz tool_result) plus CLI default unified vs --raw behavior. Ran full heru suite: uv run pytest -q -> 34 passed. Ran required Litehive contract smoke from /home/alexey/git/litehive: uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -> 197 passed. Evidence supports the acceptance criteria: one documented unified envelope is emitted by default, native payload is preserved under raw, adapters expose translation hooks, --raw restores native passthrough, tests cover representative adapter mappings, and README documents the schema/default behavior. Residual risk: adapter tests are representative rather than exhaustive for every native event variant, but there is no failing evidence and the cross-repo contract suite stayed green.
+Verification run: `uv run pytest tests/test_heru_cli.py -q` -> 21 passed. Manual checks: `uv run python -c "from heru.main import main; raise SystemExit(main(['--help']))"` listed all registered engines as subcommands; `uv run python -c "from heru.main import main; raise SystemExit(main(['codex','--help']))"` showed the shared option set; a direct monkeypatched legacy invocation confirmed the deprecation warning on stderr and forwarding of `--resume-session-id` into `resume_session_id`.
+
+Contract verification: `cd ~/git/litehive && PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0002-positional-engine-argument-in-heru-cli-heru uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -q` -> 197 passed. Acceptance criteria satisfied.
 
 IMPORTANT: When you are done, you MUST submit your verdict by running:
   litehive report --verdict <pass|reject> --role reviewer --step accepting --message "<your report>"
-The environment variable LITEHIVE_TASK_ID is set to T-0001 for this session. Workspace and task resolution should use the injected environment automatically.
+The environment variable LITEHIVE_TASK_ID is set to T-0002 for this session. Workspace and task resolution should use the injected environment automatically.
 
 Your --message is the PRIMARY way the next agent understands what happened.
 Do NOT rely on your raw transcript being read — write the report as if it is the only thing the next agent will see.

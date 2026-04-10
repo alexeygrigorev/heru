@@ -1,0 +1,57 @@
+task_id: T-0002
+step: testing
+verdict: pass
+source: agent
+summary: 'Validated the positional-engine Typer CLI end to end. Inspected heru/main.py,
+  tests/test_heru_cli.py, README.md, and pyproject.toml: engine subcommands are generated
+  from ENGINE_CHOICES, shared options are exposed on each subcommand (--cwd, --model,
+  --max-turns, --resume, --raw), main(argv) remains the entrypoint, and the legacy
+  `heru <prompt> --engine <engine>` path still dispatches through a compatibility
+  parser that prints a deprecation warning to stderr. Focused CLI tests use fake adapters
+  and assert prompt/argv forwarding, cwd/model/max-turns/resume forwarding, raw vs
+  unified behavior, per-engine help, root help, stderr/stdout pass-through, and exit-code
+  propagation across every registered engine.'
+feedback: 'Validated the positional-engine Typer CLI end to end. Inspected heru/main.py,
+  tests/test_heru_cli.py, README.md, and pyproject.toml: engine subcommands are generated
+  from ENGINE_CHOICES, shared options are exposed on each subcommand (--cwd, --model,
+  --max-turns, --resume, --raw), main(argv) remains the entrypoint, and the legacy
+  `heru <prompt> --engine <engine>` path still dispatches through a compatibility
+  parser that prints a deprecation warning to stderr. Focused CLI tests use fake adapters
+  and assert prompt/argv forwarding, cwd/model/max-turns/resume forwarding, raw vs
+  unified behavior, per-engine help, root help, stderr/stdout pass-through, and exit-code
+  propagation across every registered engine.
+
+
+  Verification run: `uv run pytest tests/test_heru_cli.py -q` -> 21 passed. Manual
+  checks: `uv run python -c "from heru.main import main; raise SystemExit(main([''--help'']))"`
+  listed all registered engines as subcommands; `uv run python -c "from heru.main
+  import main; raise SystemExit(main([''codex'',''--help'']))"` showed the shared
+  option set; a direct monkeypatched legacy invocation confirmed the deprecation warning
+  on stderr and forwarding of `--resume-session-id` into `resume_session_id`.
+
+
+  Contract verification: `cd ~/git/litehive && PYTHONPATH=/home/alexey/git/heru/.litehive/worktrees/T-0002-positional-engine-argument-in-heru-cli-heru
+  uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q` -> 197 passed. Acceptance criteria
+  satisfied.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 132
+hook_results: []
+created_at: '2026-04-10T19:26:09+00:00'

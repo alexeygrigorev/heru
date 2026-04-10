@@ -1,0 +1,31 @@
+id: SA-0004
+role: qa
+engine: codex
+status: completed
+sandboxed: false
+sandbox: host
+created_at: '2026-04-10T19:23:58+00:00'
+updated_at: '2026-04-10T19:26:09+00:00'
+pid: 1102315
+exit_code: 0
+interruption_reason: null
+resource_control:
+  enabled: false
+  profile: no-git
+  backend: null
+  runtime: null
+  image: null
+  network_mode: null
+  workspace_mode: null
+  memory_mb: null
+  cpu_count: null
+  process_limit: null
+  environment: []
+  credential_inputs: []
+  propagated_mounts: []
+resource_limit_event: null
+continuation:
+  session_id: null
+  thread_id: 019d78d9-e2a5-7622-8be0-9bdaf036bf36
+  metadata: {}
+  updated_at: '2026-04-10T19:26:09+00:00'

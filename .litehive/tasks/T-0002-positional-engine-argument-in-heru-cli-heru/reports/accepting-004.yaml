@@ -1,0 +1,63 @@
+task_id: T-0002
+step: accepting
+verdict: pass
+source: agent
+summary: 'Accepted. Verified the end-user CLI outcome against the task acceptance
+  criteria in both heru and downstream litehive. Inspected heru/main.py and confirmed
+  the entrypoint is now Typer-based, registers one subcommand per engine from ENGINE_CHOICES,
+  and shares the common options --cwd, --model, --max-turns, --resume, and --raw across
+  engine commands while preserving heru.main.main(argv) as the console entrypoint.
+  Confirmed the legacy form heru <prompt> --engine <engine> still routes through a
+  compatibility parser, accepts --resume-session-id as the deprecated alias path,
+  and emits a deprecation warning to stderr before dispatching. Inspected tests/test_heru_cli.py
+  and confirmed focused fake-adapter coverage for every registered engine subcommand,
+  including argv/option forwarding, raw versus unified output handling, stdout/stderr
+  pass-through, exit-code propagation, root help, per-engine help, and the deprecated
+  legacy invocation. Verification run in heru: uv run pytest tests/test_heru_cli.py
+  -q -> 21 passed. Manual help spot checks: uv run python -c "from heru.main import
+  main; raise SystemExit(main([''--help'']))" listed all engines as subcommands, and
+  uv run python -c "from heru.main import main; raise SystemExit(main([''codex'',''--help'']))"
+  showed the shared option set. Required downstream contract verification in litehive
+  with this worktree on PYTHONPATH: uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Evidence is sufficient
+  and the acceptance criteria are met without observed regressions.'
+feedback: 'Accepted. Verified the end-user CLI outcome against the task acceptance
+  criteria in both heru and downstream litehive. Inspected heru/main.py and confirmed
+  the entrypoint is now Typer-based, registers one subcommand per engine from ENGINE_CHOICES,
+  and shares the common options --cwd, --model, --max-turns, --resume, and --raw across
+  engine commands while preserving heru.main.main(argv) as the console entrypoint.
+  Confirmed the legacy form heru <prompt> --engine <engine> still routes through a
+  compatibility parser, accepts --resume-session-id as the deprecated alias path,
+  and emits a deprecation warning to stderr before dispatching. Inspected tests/test_heru_cli.py
+  and confirmed focused fake-adapter coverage for every registered engine subcommand,
+  including argv/option forwarding, raw versus unified output handling, stdout/stderr
+  pass-through, exit-code propagation, root help, per-engine help, and the deprecated
+  legacy invocation. Verification run in heru: uv run pytest tests/test_heru_cli.py
+  -q -> 21 passed. Manual help spot checks: uv run python -c "from heru.main import
+  main; raise SystemExit(main([''--help'']))" listed all engines as subcommands, and
+  uv run python -c "from heru.main import main; raise SystemExit(main([''codex'',''--help'']))"
+  showed the shared option set. Required downstream contract verification in litehive
+  with this worktree on PYTHONPATH: uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py
+  tests/test_heru_cli.py tests/test_codex_quota.py -q -> 197 passed. Evidence is sufficient
+  and the acceptance criteria are met without observed regressions.'
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 130
+hook_results: []
+created_at: '2026-04-10T19:28:19+00:00'

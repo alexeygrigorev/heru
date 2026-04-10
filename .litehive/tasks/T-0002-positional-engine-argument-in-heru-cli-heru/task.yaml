@@ -6,15 +6,15 @@ task_type: null
 model: null
 mode: implementation
 pipeline_mode: full
-status: queued
+status: in_progress
 flag_reason: null
 flag_count: 0
-pipeline_status: backlog
+pipeline_status: commit_to_git
 priority: high
 pm_complexity: simple
 planned_effort: s
 created_at: '2026-04-10T18:49:11+00:00'
-updated_at: '2026-04-10T18:49:11+00:00'
+updated_at: '2026-04-10T19:28:19+00:00'
 goal: Current CLI is 'heru <prompt> --engine codex'. The vision is 'heru codex <prompt>'
   with the engine as a positional subcommand. Switch to a Typer-based CLI where each
   engine is a registered subcommand that shares common options (--cwd, --resume, --model,
@@ -32,7 +32,42 @@ acceptance_criteria:
 constraints: []
 plan: []
 human_checkpoints: []
-subagents: []
+subagents:
+- id: SA-0001
+  role: planner
+  engine: codex
+  status: completed
+  path: subagents/SA-0001-planner
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0002
+  role: swe
+  engine: codex
+  status: completed
+  path: subagents/SA-0002-swe
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0003
+  role: swe
+  engine: codex
+  status: completed
+  path: subagents/SA-0003-swe
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0004
+  role: qa
+  engine: codex
+  status: completed
+  path: subagents/SA-0004-qa
+  sandboxed: false
+  sandbox_summary: host
+- id: SA-0005
+  role: reviewer
+  engine: codex
+  status: completed
+  path: subagents/SA-0005-reviewer
+  sandboxed: false
+  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0002 positional-engine-argument-in-heru-cli-heru'
