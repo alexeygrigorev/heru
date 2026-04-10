@@ -1,0 +1,3 @@
+{"type":"text","sessionID":"opencode-session-123","part":{"text":"OpenCode line 1"}}
+{"type":"text","sessionID":"opencode-session-123","part":{"text":"OpenCode line 2"}}
+{"type":"step_finish","sessionID":"opencode-session-123","part":{"tokens":{"input":6,"output":5,"total":11,"reasoning":2,"cache":{"read":1,"write":3}},"cost":0.33,"reason":"stop"}}

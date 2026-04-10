@@ -1,0 +1,5 @@
+{"type":"assistant.message","data":{"content":"Copilot final answer","sessionId":"copilot-session-123"}}
+{"type":"assistant.message_delta","data":{"deltaContent":"Copilot delta"}}
+{"type":"tool.execution_start","data":{"toolName":"search"}}
+{"type":"tool.execution_complete","data":{"toolName":"search","success":true,"result":{"content":"search output"}}}
+{"type":"assistant.usage","data":{"inputTokens":10,"outputTokens":5,"cacheReadTokens":2,"model":"gpt-5","cost":0.42,"quotaSnapshots":{"chat":{"entitlementRequests":100,"usedRequests":70,"remainingPercentage":30.0,"resetDate":"2026-04-11T00:00:00Z"}}}}

@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"codex-thread-123"}
+{"type":"item.completed","item":{"id":"msg-1","type":"agent_message","text":"Codex says hello."}}
+{"type":"item.updated","item":{"id":"msg-1","type":"agent_message","text":"Codex says hello again."}}
+{"type":"item.completed","item":{"id":"cmd-1","type":"command_execution","command":["bash","-lc","pwd"],"aggregated_output":"/tmp/work\n","exit_code":0}}
+{"type":"turn.completed","usage":{"input_tokens":12,"output_tokens":8,"cached_input_tokens":3,"reasoning_tokens":4,"total_tokens":20}}
