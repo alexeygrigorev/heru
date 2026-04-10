@@ -1,0 +1,60 @@
+id: T-0005
+slug: pre-commit-hook-that-runs-litehive-s-smoke-tests
+title: Pre-commit hook that runs litehive's smoke tests against staged heru changes
+depends_on: []
+task_type: null
+model: null
+mode: implementation
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: high
+pm_complexity: simple
+planned_effort: s
+created_at: '2026-04-10T18:52:51+00:00'
+updated_at: '2026-04-10T18:52:51+00:00'
+goal: "heru is depended on by litehive via an editable path install. Any change to\
+  \ heru that breaks litehive's contract (e.g. renames a method, changes argv ordering,\
+  \ removes a class) silently breaks litehive on the next run. Install a git pre-commit\
+  \ hook in heru that, when files under heru/ or tests/ are staged, automatically\
+  \ runs litehive's focused smoke test suite against the staged state. If the smoke\
+  \ tests fail, the commit is rejected with a clear diagnostic. This is the biggest-ROI\
+  \ defense against heru\u2192litehive regression because it enforces the contract\
+  \ at commit time rather than relying on developer discipline."
+acceptance_criteria:
+- A pre-commit hook script is committed under scripts/pre-commit.sh (so it can be
+  versioned) and installed via a 'make install-hooks' or 'scripts/install-hooks.sh'
+  helper that symlinks it into .git/hooks/pre-commit
+- "The hook detects when staged files include anything under heru/ or tests/ and,\
+  \ if so, runs a focused 'uv run pytest' against litehive's contract test set (test_runner_workflow.py,\
+  \ test_engine_variants_and_timeline.py, test_heru_cli.py, test_codex_quota.py, test_observability_and_status.py\
+  \ \u2014 whichever exercise heru's public API)"
+- 'The hook discovers litehive''s path automatically: tries a sibling-dir heuristic
+  (../litehive), falls back to an env var LITEHIVE_REPO, and skips with a warning
+  if neither is found (so the hook is not a hard blocker for users who don''t develop
+  litehive alongside)'
+- The hook runs in under 2 minutes on a warm venv, producing clear output on which
+  tests failed if any
+- README has a 'Development' section explaining the hook, how to install it, how to
+  skip it with --no-verify when intentional, and what the litehive contract is
+constraints: []
+plan: []
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0005 pre-commit-hook-that-runs-litehive-s-smoke-tests'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null

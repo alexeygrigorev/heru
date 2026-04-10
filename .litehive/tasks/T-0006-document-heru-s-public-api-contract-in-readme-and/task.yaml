@@ -1,0 +1,57 @@
+id: T-0006
+slug: document-heru-s-public-api-contract-in-readme-and
+title: Document heru's public API contract in README and docstrings
+depends_on:
+- T-0005
+task_type: null
+model: null
+mode: implementation
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: medium
+pm_complexity: simple
+planned_effort: s
+created_at: '2026-04-10T18:53:09+00:00'
+updated_at: '2026-04-10T18:53:09+00:00'
+goal: heru is used by litehive and (per the vision) by other callers via 'pip install
+  heru' or 'heru <engine> <prompt>'. Without a clear public API boundary, every identifier
+  looks stable and any change is scary. Explicitly document which classes, methods,
+  functions, and types are part of the stable public contract vs internal (the _prefixed
+  modules, internal helpers, etc). The public contract is what heru commits to preserving
+  across versions. Internal modules can change freely. This makes 'breaking change'
+  vs 'internal refactor' an objective classification.
+acceptance_criteria:
+- "README has an 'API Contract' section listing every stable public name \u2014 ExternalCLIAdapter,\
+  \ CLIInvocation, CLIExecutionResult, get_engine, ENGINE_CHOICES, the six adapter\
+  \ classes, the types in heru.types \u2014 with a one-line description of what each\
+  \ guarantees"
+- The same section explicitly marks which modules are internal (any _prefixed module
+  like _codex_impl, _engine_detection, _continuation) and may change without notice
+- Each public class and function gets a module-level docstring that calls out its
+  public status and what callers can rely on
+- "A stability matrix is added showing heru version \u2192 what broke in which public\
+  \ API, to establish a track record of semver discipline going forward"
+- 'A brief ''how to submit a breaking change'' note: semver bump, CHANGELOG entry,
+  migration note for litehive (and any other known consumer)'
+constraints: []
+plan: []
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0006 document-heru-s-public-api-contract-in-readme-and'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null

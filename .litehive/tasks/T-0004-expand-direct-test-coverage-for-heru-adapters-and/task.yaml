@@ -1,0 +1,61 @@
+id: T-0004
+slug: expand-direct-test-coverage-for-heru-adapters-and
+title: Expand direct test coverage for heru adapters and base.py
+depends_on: []
+task_type: null
+model: null
+mode: implementation
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: high
+pm_complexity: moderate
+planned_effort: l
+created_at: '2026-04-10T18:49:47+00:00'
+updated_at: '2026-04-10T18:49:47+00:00'
+goal: 'heru is 4381 lines of code but has only 26 direct unit tests at the time of
+  the initial extraction from litehive. Most of heru''s behavior is currently tested
+  via litehive integration tests that exercise the full orchestration pipeline and
+  cannot be run from heru alone. Add heru-native unit tests so that ''uv run pytest''
+  inside the heru repo gives meaningful coverage independent of litehive. Each adapter
+  should have tests for build_invocation (fresh and resume shapes), render_transcript
+  (with fixture-based JSONL samples), extract_usage_observation, extract_continuation,
+  and any adapter-specific helpers. base.py should have direct tests for ExternalCLIAdapter.run_live,
+  stream_event iteration, inactivity timeout, and environment stripping. Target: roughly
+  3x the current coverage, ~80+ new tests.'
+acceptance_criteria:
+- Every adapter (codex, claude, copilot, gemini, opencode, goz) has at least 10 direct
+  unit tests exercising build_invocation, render_transcript, extract_usage_observation,
+  extract_continuation, and any helper logic in its _*_impl.py module
+- base.py has direct tests for run_live happy path, stderr-only noise with inactivity
+  timeout (extending existing 3 tests), graceful process termination, and continuation
+  extraction integration
+- quota/ has unit tests for claude_quota, copilot_quota, and zai_quota parsing (codex
+  already has 15 tests from the initial extraction)
+- heru CLI (main.py) has end-to-end smoke tests that spawn a fake engine binary (tiny
+  python script that emits fixture JSONL) and verify the CLI wires everything correctly
+- 'Target: heru test count grows from 26 to at least 100 direct tests, all passing
+  standalone via ''uv run pytest'' in the heru repo'
+- "No test in heru imports from litehive \u2014 every heru test must run in a fresh\
+  \ venv with only heru + pydantic + pytest installed"
+constraints: []
+plan: []
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0004 expand-direct-test-coverage-for-heru-adapters-and'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null

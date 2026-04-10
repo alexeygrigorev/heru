@@ -1,0 +1,56 @@
+id: T-0001
+slug: unified-jsonl-event-output-across-all-engines
+title: Unified JSONL event output across all engines
+depends_on: []
+task_type: null
+model: null
+mode: implementation
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: high
+pm_complexity: moderate
+planned_effort: m
+created_at: '2026-04-10T18:48:58+00:00'
+updated_at: '2026-04-10T18:48:58+00:00'
+goal: Today each heru adapter (codex, claude, copilot, gemini, opencode, goz) streams
+  its engine's native JSONL payloads directly to stdout. Callers have to parse 6 different
+  event schemas to extract agent messages, tool calls, tool outputs, errors, and usage.
+  Define a single unified event envelope that heru emits regardless of the underlying
+  engine. Each adapter translates its native events into the unified shape before
+  streaming. The native payload stays embedded as a 'raw' field for consumers that
+  need engine-specific detail.
+acceptance_criteria:
+- 'Define a UnifiedEvent schema (pydantic model) with fields like: kind (message|tool_call|tool_result|usage|error|status|continuation),
+  engine, sequence, timestamp, role, content, tool_name, tool_input, tool_output,
+  error, usage_delta, continuation_id, raw (the original native payload)'
+- Each adapter implements a translate_native_event(native_payload) -> UnifiedEvent
+  | None method that maps engine-specific events to the unified shape
+- ExternalCLIAdapter.run gains an emit_unified mode that streams UnifiedEvent JSONL
+  to stdout instead of native payloads
+- heru CLI defaults to emit_unified output; a --raw flag opts back into native passthrough
+  for debugging
+- Unit tests per adapter with fixture-based native event samples asserting the translated
+  UnifiedEvent shape
+- Docs section in README.md describing the unified event schema
+constraints: []
+plan: []
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0001 unified-jsonl-event-output-across-all-engines'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null

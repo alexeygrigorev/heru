@@ -1,0 +1,59 @@
+id: T-0003
+slug: unified-resume-continue-across-all-engines
+title: Unified --resume/--continue across all engines
+depends_on:
+- T-0001
+task_type: null
+model: null
+mode: implementation
+pipeline_mode: full
+status: queued
+flag_reason: null
+flag_count: 0
+pipeline_status: backlog
+priority: high
+pm_complexity: simple
+planned_effort: s
+created_at: '2026-04-10T18:49:27+00:00'
+updated_at: '2026-04-10T18:49:27+00:00'
+goal: Every supported engine has native session resume (codex exec resume, claude
+  --resume, gemini --resume, copilot --continue/--resume, opencode --session/--continue,
+  goz --resume-session). Heru's adapters accept a resume_session_id parameter and
+  each adapter emits the right CLI flag for its engine. Expose this at the CLI level
+  with a unified --resume <id> flag that works for every engine subcommand, plus --continue
+  that resumes the most recent session per engine. The unified event stream must emit
+  a continuation event containing the current session id so callers can capture it
+  for the next run.
+acceptance_criteria:
+- Each engine subcommand accepts --resume <id> and forwards to the underlying native
+  resume mechanism, producing a session that continues the prior conversation with
+  full context
+- Each engine subcommand accepts --continue (no id) that resolves to 'most recent
+  session for this engine' and resumes it (for engines where that is a native concept;
+  error for engines that require an explicit id)
+- The unified JSONL stream (from T-0001) emits a 'continuation' event at the end of
+  every run containing the session_id of the finished session, so callers can pass
+  it to --resume on the next run without scraping logs
+- 'Integration test: run ''heru codex hi'', capture the continuation session id from
+  the output, then run ''heru codex --resume <id> what did we discuss'' and assert
+  it references the prior turn'
+- Same test repeated for each engine with a real or fake adapter
+constraints: []
+plan: []
+human_checkpoints: []
+subagents: []
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0003 unified-resume-continue-across-all-engines'
+  commit_sha: null
+  checkpoint_base_sha: null
+  checkpoint_attempts: 0
+  rolled_back_checkpoint_attempt: null
+  merge_agent_attempts: 0
+  worktree_path: null
+retry_policy:
+  max_retries: null
+  stage_retry_limit: null
+created_from: null
+upstream_origin: null
+github_origin: null

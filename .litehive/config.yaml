@@ -1,0 +1,110 @@
+default_engine: codex
+recovery_engine: null
+litehive_source_path: null
+process_profile: python
+codex_model: null
+opencode_model: zai-coding-plan/glm-5.1
+goz_model: glm-5-turbo
+gemini_model: null
+copilot_model: null
+claude_model: claude-sonnet-4-20250514
+claude_max_turns: 30
+pool_usage_cap: null
+pool_cost_cap: null
+engine_usage_caps: {}
+engine_budget_caps: {}
+engine_costs:
+  codex: 1
+  opencode: 1
+  gemini: 1
+  copilot: 1
+  claude: 3
+  goz: 1
+default_retry_limit: 3
+default_stage_retry_limit: 2
+execution_retry_policies:
+  claude:
+    max_retries: 2
+    backoff_seconds: 0.25
+    backoff_multiplier: 2.0
+    retry_on:
+    - timeout
+    - network
+    - service
+  codex:
+    max_retries: 2
+    backoff_seconds: 0.25
+    backoff_multiplier: 2.0
+    retry_on:
+    - timeout
+    - network
+    - service
+  opencode:
+    max_retries: 2
+    backoff_seconds: 0.25
+    backoff_multiplier: 2.0
+    retry_on:
+    - timeout
+    - network
+    - service
+  gemini:
+    max_retries: 2
+    backoff_seconds: 0.25
+    backoff_multiplier: 2.0
+    retry_on:
+    - timeout
+    - network
+    - service
+  goz:
+    max_retries: 2
+    backoff_seconds: 0.25
+    backoff_multiplier: 2.0
+    retry_on:
+    - timeout
+    - network
+    - service
+pool_stop_on_failure: false
+pool_max_tasks: null
+pool_stop_on_execution_limit: false
+pool_quota_threshold: null
+pool_budget_threshold: null
+pool_stop_on_dirty_git: false
+pool_selection_policy: dependency_aware
+runner_hook_execution_mode: run_all
+runner_hooks: {}
+subagent_inactivity_timeout_seconds: 360.0
+inactivity_timeout_seconds: null
+subagent_resource_limits:
+  enabled: false
+  memory_mb: null
+  cpu_count: null
+  process_limit: null
+external_engine_sandbox:
+  enabled: false
+  backend: docker
+  runtime_binary: docker
+  image: litehive-external-engine:latest
+  workspace_mount_path: /workspace
+  binary_mount_root: /litehive/bin
+  runtime_args: []
+  default_network_mode: none
+  default_workspace_mode: rw
+  read_only_rootfs: true
+  drop_capabilities: true
+  no_new_privileges: true
+  tmpfs:
+  - /tmp
+  engine_policies: {}
+engine_freeze: {}
+engine_preference:
+- codex
+- opencode
+- gemini
+- copilot
+- goz
+agent_startup_guidance: {}
+parallel_capacity: 1
+parallel_integration_check: null
+auto_commit: true
+task_mode_name: tasks
+implementation_mode_name: implementation
