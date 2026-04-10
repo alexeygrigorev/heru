@@ -35,9 +35,11 @@ authoritative long version.
    ```
 3. **`StageReport` and friends are litehive concepts** — they live in
    `heru/types.py` temporarily and will move. Don't extend them here.
-4. **Tests under `tests/` must be standalone** — no `from litehive`
-   imports, no real subprocess calls to engine CLIs. Fixture-driven
-   only.
+4. **`tests/` and `tests_integration/` serve different purposes**:
+   `tests/` must stay standalone, fixture-driven, and free of real
+   engine subprocess calls. `tests_integration/` is the opt-in
+   real-binary suite and requires `HERU_INTEGRATION_ENGINES` plus the
+   relevant installed CLIs.
 5. **Anything not `_`-prefixed is public API** — changing it is a
    semver-major breaking change.
 6. **Each adapter needs both a public class and a `_impl` module** —
@@ -49,8 +51,11 @@ authoritative long version.
 # Set up the heru venv
 uv sync --extra dev
 
-# Run heru's standalone tests
+# Run heru's standalone fixture-only tests
 uv run pytest
+
+# Run one real-binary integration file
+HERU_INTEGRATION_ENGINES=codex uv run pytest tests_integration/test_codex.py -q
 
 # Invoke the CLI
 uv run heru codex "hello"
@@ -70,7 +75,8 @@ heru/
 │   ├── main.py            # `heru <engine> <prompt>` entry
 │   ├── adapters/          # one module per engine (+ _impl helpers)
 │   └── quota/             # per-provider quota checks
-├── tests/                 # standalone pytest suite
+├── tests/                 # default standalone fixture-only pytest suite
+├── tests_integration/     # opt-in real-CLI smoke tests
 ├── pyproject.toml
 └── README.md
 ```
