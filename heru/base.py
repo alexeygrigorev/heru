@@ -18,16 +18,12 @@ import subprocess
 import time
 from typing import Callable, Literal
 
-from pydantic import ValidationError
-
 from heru.types import (
     EngineUsageObservation,
     EngineUsageWindow,
     LiveEvent,
     LiveTimeline,
     RuntimeEngineContinuation,
-    StageReport,
-    StageResultSubmission,
     SubagentStatus,
     UnifiedEvent,
     cap_feedback,
@@ -449,21 +445,6 @@ class ExternalCLIAdapter:
         finally:
             selector.close()
 
-    def parse_stage_report(
-        self,
-        *,
-        task_id: str,
-        step: Literal["grooming", "implementing", "testing", "accepting"],
-        execution: CLIExecutionResult,
-        subagent_status: SubagentStatus,
-    ) -> StageReport:
-        return parse_stage_report_text(
-            task_id=task_id,
-            step=step,
-            transcript=self.render_transcript(execution),
-            subagent_status=subagent_status,
-        )
-
     def render_transcript(self, execution: CLIExecutionResult) -> str:
         return execution.transcript
 
@@ -483,28 +464,6 @@ class ExternalCLIAdapter:
         if empty_on_parsed_payloads and iter_jsonl_payloads(execution.stdout):
             return f"[stderr]\n{execution.stderr.strip()}" if execution.stderr.strip() else ""
         return execution.transcript
-
-    def parse_stage_report_with_error_fallback(
-        self,
-        *,
-        task_id: str,
-        step: Literal["grooming", "implementing", "testing", "accepting"],
-        execution: CLIExecutionResult,
-        subagent_status: SubagentStatus,
-        transcript: str,
-        fallback_errors: list[str],
-        fallback_when_default_transcript: bool = True,
-    ) -> StageReport:
-        if fallback_when_default_transcript and transcript == execution.transcript and fallback_errors:
-            transcript = "\n".join(fallback_errors)
-        elif not fallback_when_default_transcript and not transcript and fallback_errors:
-            transcript = "\n".join(fallback_errors)
-        return parse_stage_report_text(
-            task_id=task_id,
-            step=step,
-            transcript=transcript,
-            subagent_status=subagent_status,
-        )
 
     def usage_observation_from_scan(
         self,
@@ -813,123 +772,6 @@ def extract_codex_errors(stdout: str) -> list[str]:
                 continue
         command_errors.pop(item_id, None)
     return [*errors, *command_errors.values()]
-
-
-def parse_stage_report_text(
-    *,
-    task_id: str,
-    step: Literal["grooming", "implementing", "testing", "accepting"],
-    transcript: str,
-    subagent_status: SubagentStatus,
-) -> StageReport:
-    # Prefer schema-validated structured submission when present.
-    submission = _extract_stage_result_submission(transcript)
-    if isinstance(submission, StageResultSubmission):
-        warnings = list(submission.warnings)
-        verdict = submission.verdict
-        if subagent_status != "completed" and verdict == "pass":
-            verdict = "reject"
-            warnings.append(
-                "Ignoring structured passing verdict because subagent status was "
-                f"`{subagent_status}`."
-            )
-        task_update_dict: dict[str, object] = (
-            submission.task_update.model_dump(exclude_unset=True) if submission.task_update else {}
-        )
-        if submission.acceptance_criteria and "acceptance_criteria" not in task_update_dict:
-            task_update_dict["acceptance_criteria"] = submission.acceptance_criteria
-        return StageReport(
-            task_id=task_id,
-            step=step,
-            verdict=verdict,  # type: ignore[arg-type]
-            summary=submission.summary,
-            feedback=cap_feedback(transcript),
-            task_update=task_update_dict,
-            tests={"added": submission.tests.added, "passing": submission.tests.passing},
-            warnings=warnings,
-        )
-
-    # No valid structured submission and no CLI verdict — treat agent non-completion as reject.
-    # Attach validation warnings if the structured block was present but invalid.
-    warnings: list[str] = ["Agent did not submit verdict via litehive report CLI."]
-    if isinstance(submission, ValidationError):
-        warnings.extend(_format_stage_result_validation_errors(submission))
-
-    if transcript:
-        summary = transcript.splitlines()[0]
-    elif subagent_status == "completed":
-        summary = f"{step} completed without verdict"
-    else:
-        summary = f"{step} rejected without verdict"
-    return StageReport(
-        task_id=task_id,
-        step=step,
-        verdict="reject",
-        summary=summary,
-        feedback=cap_feedback(transcript),
-        warnings=warnings,
-    )
-
-
-
-
-
-
-def _extract_stage_result_submission(
-    text: str,
-) -> StageResultSubmission | ValidationError | None:
-    """Extract and validate a ``STAGE_RESULT:`` JSON block from transcript text.
-
-    Returns the validated model on success, a ``ValidationError`` when the JSON
-    is present but invalid, or ``None`` when no ``STAGE_RESULT:`` block exists.
-    """
-    # Inline extraction of the STAGE_RESULT: section from text.
-    capture = False
-    section_lines: list[str] = []
-    header = "STAGE_RESULT:"
-    section: str | None = None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped == header:
-            capture = True
-            continue
-        if not capture and stripped.startswith(header):
-            inline_value = stripped[len(header):].strip()
-            section = inline_value or None
-            break
-        if capture and re.match(r"^[A-Z_]+:", stripped):
-            break
-        if capture:
-            section_lines.append(line)
-    if section is None and section_lines:
-        section = "\n".join(section_lines).rstrip() or None
-    if section is None:
-        return None
-    try:
-        payload = json.loads(section)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    # Normalise verdict to lowercase before validation.
-    verdict = payload.get("verdict")
-    if isinstance(verdict, str):
-        payload["verdict"] = verdict.strip().lower()
-    try:
-        return StageResultSubmission.model_validate(payload)
-    except ValidationError as exc:
-        return exc
-
-
-def _format_stage_result_validation_errors(exc: ValidationError) -> list[str]:
-    """Convert a Pydantic ``ValidationError`` into human-readable warning lines."""
-    warnings: list[str] = []
-    for error in exc.errors():
-        loc = " -> ".join(str(part) for part in error["loc"]) if error["loc"] else "(root)"
-        warnings.append(f"STAGE_RESULT validation: {loc}: {error['msg']}")
-    return warnings
-
-
 
 
 def extract_live_timeline(

@@ -1,6 +1,3 @@
-import pytest
-from pydantic import ValidationError
-
 from heru.types import (
     EngineUsageObservation,
     EngineUsageWindow,
@@ -8,11 +5,7 @@ from heru.types import (
     LiveTimeline,
     ResourceLimitEvent,
     RuntimeEngineContinuation,
-    StageReport,
-    StageResultSubmission,
-    StageResultTests,
     SubagentRef,
-    TaskUpdateSubmission,
     UnifiedEvent,
 )
 
@@ -98,53 +91,3 @@ def test_subagent_ref_defaults_public_status_and_sandbox_fields() -> None:
     assert ref.sandbox_summary == ""
 
 
-def test_stage_result_tests_defaults_to_zero_counts() -> None:
-    counts = StageResultTests()
-
-    assert counts.added == 0
-    assert counts.passing == 0
-
-
-def test_task_update_submission_accepts_public_planning_fields() -> None:
-    update = TaskUpdateSubmission(
-        title="Add contract tests",
-        acceptance_criteria=["criterion 1"],
-        plan=["step 1"],
-        pm_complexity="moderate",
-        planned_effort="m",
-        mode="implementation",
-    )
-
-    assert update.title == "Add contract tests"
-    assert update.acceptance_criteria == ["criterion 1"]
-    assert update.plan == ["step 1"]
-    assert update.pm_complexity == "moderate"
-    assert update.planned_effort == "m"
-    assert update.mode == "implementation"
-
-
-def test_stage_result_submission_normalizes_accept_to_pass() -> None:
-    submission = StageResultSubmission(verdict="accept", summary="done")
-
-    assert submission.verdict == "pass"
-    assert submission.tests == StageResultTests()
-
-
-def test_stage_result_submission_normalizes_fail_to_reject() -> None:
-    submission = StageResultSubmission(verdict="fail", summary="broken")
-
-    assert submission.verdict == "reject"
-
-
-def test_stage_result_submission_forbids_unknown_fields() -> None:
-    with pytest.raises(ValidationError):
-        StageResultSubmission(verdict="pass", summary="done", unexpected=True)
-
-
-def test_stage_report_preserves_public_defaults() -> None:
-    report = StageReport(task_id="T-1", step="implementing", verdict="pass", summary="done")
-
-    assert report.source == "agent"
-    assert report.tests == {"added": 0, "passing": 0}
-    assert report.retry_source == "global"
-    assert report.created_at.endswith("+00:00")

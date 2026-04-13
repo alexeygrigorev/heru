@@ -53,11 +53,19 @@ All output is streamed as unified JSONL by default. Pass `--raw` to get
 the engine's native JSON/JSONL stream back for debugging.
 
 `heru usage` prints one human-readable line per provider for `codex`,
-`claude`, `copilot`, and `zai`, including used, limit, remaining, unit,
-reset window, reset time, and any active block reason. `heru usage <name>`
-prints the same information for one provider. `--json` emits machine-readable
-JSON instead. `gemini` is accepted for the single-provider form and reports
+`claude`, `copilot`, and `zai`. Every supported provider now returns the
+same shape: exactly two windows, `short_term` and `long_term`, each with
+`percent_remaining` and `reset_at`. `--json` emits that same schema
+directly. `gemini` is accepted for the single-provider form and reports
 `unsupported` because it does not currently expose a usage endpoint.
+
+Provider mapping:
+
+- `codex`: `short_term` is hardcoded to `100%` remaining, `long_term` maps to the weekly API window.
+- `claude`: `short_term` maps to the 5-hour signal, `long_term` maps to the 7-day signal.
+- `copilot`: `short_term` is hardcoded to `100%` remaining, `long_term` maps to the monthly premium-interactions signal.
+- `zai`: `short_term` maps to the tokens signal only, `long_term` is hardcoded to `100%` remaining.
+- `gemini`: unsupported.
 
 ## Unified Event Schema
 
@@ -93,7 +101,7 @@ uv add heru
 
 ## Status
 
-**v0.1.0 is a physical extraction from
+**v1.0.0 is a physical extraction from
 [litehive](https://github.com/alexeygrigorev/litehive),** which uses
 heru as its engine execution layer. Several things from the vision
 above are still in flight:
@@ -110,9 +118,9 @@ above are still in flight:
 ```
 heru/
   adapters/    per-engine CLI wrappers (codex, claude, copilot, gemini, opencode, goz)
-  quota/       per-provider quota / rate-limit parsing
+  quota/       unified provider quota / rate-limit parsing
   base.py      ExternalCLIAdapter base class + CLIInvocation
-  types.py     shared types (StageReport etc. are here temporarily — see below)
+  types.py     shared engine/stream/usage types
   main.py      entrypoint for `heru <engine> <prompt>`
 
 tests/         unit tests for adapters, quota parsing, inactivity timeout
@@ -159,10 +167,6 @@ breaking changes and require a semver-major release.
 - `ResourceLimitEvent`: normalized process-resource failure details attached to stage reports.
 - `RuntimeEngineContinuation`: stable continuation/session handle for resume flows across engines.
 - `SubagentRef`: stable reference to a spawned subagent as reported in pipeline payloads.
-- `StageResultTests`: stable count payload for tests added and passing in a structured stage result.
-- `TaskUpdateSubmission`: stable schema for structured task updates submitted during grooming.
-- `StageResultSubmission`: stable schema for structured stage verdict payloads submitted by agents.
-- `StageReport`: stable persisted stage-report record exchanged with litehive today.
 
 ### Internal modules
 
@@ -187,6 +191,7 @@ stable contract.
 | heru version | Public API breakage |
 | --- | --- |
 | `v0.1.0` | Initial extracted public contract. No documented breaking public API changes yet. |
+| `v1.0.0` | Breaking change: provider-specific quota dataclasses and CLI fields replaced by unified `short_term` / `long_term` usage windows. |
 
 ### Submitting A Breaking Change
 
@@ -195,14 +200,6 @@ If you need to break any public API listed above:
 1. Bump heru's semver major version in `pyproject.toml`.
 2. Add a CHANGELOG entry that names the broken public API and the replacement.
 3. Add a migration note for litehive and any other known consumer that relies on the changed contract.
-
-## Caveat — stage reports
-
-`heru/types.py` currently defines `StageReport`, `StageResultSubmission`,
-`StageResultTests`, and `TaskUpdateSubmission`. These are really a
-litehive pipeline concept (the `STAGE_RESULT:` agent protocol, retry
-bookkeeping, outcome classification) and will eventually move out of
-heru into litehive. Tracking in the litehive task backlog.
 
 ## Tests
 

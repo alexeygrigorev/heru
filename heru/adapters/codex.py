@@ -23,7 +23,6 @@ from heru.adapters._codex_impl import (
 from heru.base import (
     CLIExecutionResult,
     ExternalCLIAdapter,
-    parse_stage_report_text,
 )
 from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
@@ -110,12 +109,6 @@ class CodexCLIAdapter(ExternalCLIAdapter):
         if iter_codex_payloads(execution.stdout):
             return f"[stderr]\n{execution.stderr.strip()}" if execution.stderr.strip() else ""
         return execution.transcript
-
-    def parse_stage_report(self, *, task_id: str, step: str, execution: CLIExecutionResult, subagent_status: str):
-        transcript = self.render_transcript(execution)
-        if not transcript:
-            transcript = "\n".join(extract_codex_errors(execution.stdout))
-        return parse_stage_report_text(task_id=task_id, step=step, transcript=transcript, subagent_status=subagent_status)
 
     def extract_usage_observation(self, execution: CLIExecutionResult):
         payloads = iter_codex_payloads(execution.stdout)

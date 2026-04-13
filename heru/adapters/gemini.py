@@ -61,16 +61,6 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
             assistant_text=extract_jsonl_messages(execution.stdout),
         )
 
-    def parse_stage_report(self, *, task_id: str, step: str, execution: CLIExecutionResult, subagent_status: str):
-        return self.parse_stage_report_with_error_fallback(
-            task_id=task_id,
-            step=step,
-            execution=execution,
-            subagent_status=subagent_status,
-            transcript=self.render_transcript(execution),
-            fallback_errors=extract_jsonl_errors(execution.stdout),
-        )
-
     def extract_usage_observation(self, execution: CLIExecutionResult):
         payloads = iter_jsonl_payloads(execution.stdout)
         metadata: dict[str, str | int | bool | None] = {}

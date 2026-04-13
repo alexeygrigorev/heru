@@ -33,7 +33,6 @@ from heru.base import (
     extract_stream_errors,
     extract_stream_transcript,
     iter_jsonl_payloads,
-    parse_stage_report_text,
 )
 from heru.types import (
     EngineUsageObservation,
@@ -147,5 +146,4 @@ __all__ = [
     "get_engine",
     "get_stream_event_adapter",
     "iter_jsonl_payloads",
-    "parse_stage_report_text",
 ]

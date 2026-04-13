@@ -108,18 +108,6 @@ class ClaudeCLIAdapter(ExternalCLIAdapter):
         )
         return self.render_transcript_from_parts(execution, assistant_text=assistant_text)
 
-    def parse_stage_report(self, *, task_id: str, step: str, execution: CLIExecutionResult, subagent_status: str):
-        transcript = self.render_transcript(execution)
-        fallback_errors = extract_stream_errors(execution.stdout, adapter=self.stream_event_adapter()) or extract_jsonl_errors(execution.stdout)
-        return self.parse_stage_report_with_error_fallback(
-            task_id=task_id,
-            step=step,
-            execution=execution,
-            subagent_status=subagent_status,
-            transcript=transcript,
-            fallback_errors=fallback_errors,
-        )
-
     def extract_usage_observation(self, execution: CLIExecutionResult):
         payloads = iter_jsonl_payloads(execution.stdout)
         for payload in reversed(payloads):

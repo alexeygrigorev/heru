@@ -37,7 +37,6 @@ def test_readme_api_contract_section_lists_public_and_internal_names() -> None:
     assert "OpenCodeAdapter" in readme
     assert "GozCLIAdapter" in readme
     assert "EngineUsageWindow" in readme
-    assert "StageReport" in readme
     assert "heru._engine_detection" in readme
     assert "heru.adapters._codex_impl" in readme
     assert "### Stability Matrix" in readme
@@ -75,10 +74,6 @@ def test_public_modules_classes_and_functions_have_contract_docstrings() -> None
             "ResourceLimitEvent",
             "RuntimeEngineContinuation",
             "SubagentRef",
-            "StageResultTests",
-            "TaskUpdateSubmission",
-            "StageResultSubmission",
-            "StageReport",
         ],
         ROOT / "heru/adapters/codex.py": ["CodexCLIAdapter"],
         ROOT / "heru/adapters/claude.py": ["ClaudeCLIAdapter"],
