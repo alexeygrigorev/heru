@@ -173,7 +173,6 @@ breaking changes and require a semver-major release.
 The modules below are internal implementation details and may change
 without notice in any release:
 
-- `heru._engine_detection`
 - `heru._continuation`
 - `heru.adapters._codex_impl`
 - `heru.adapters._claude_impl`

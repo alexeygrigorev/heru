@@ -37,7 +37,6 @@ def test_readme_api_contract_section_lists_public_and_internal_names() -> None:
     assert "OpenCodeAdapter" in readme
     assert "GozCLIAdapter" in readme
     assert "EngineUsageWindow" in readme
-    assert "heru._engine_detection" in readme
     assert "heru.adapters._codex_impl" in readme
     assert "### Stability Matrix" in readme
     assert "v0.1.0" in readme

@@ -4,15 +4,15 @@ import inspect
 
 from heru.base import ExternalCLIAdapter
 
-_ORIGINAL_EXTERNAL_ADAPTER_RUN = ExternalCLIAdapter.run
-_ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE = ExternalCLIAdapter.run_live
+ORIGINAL_EXTERNAL_ADAPTER_RUN = ExternalCLIAdapter.run
+ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE = ExternalCLIAdapter.run_live
 
 
-def _supports_live_execution(engine: object) -> bool:
+def supports_live_execution(engine: object) -> bool:
     run_live = getattr(engine, "run_live", None)
     if not callable(run_live):
         return False
-    return not _prefers_non_live_run(engine)
+    return not prefers_non_live_run(engine)
 
 
 def _unwrap_bound_callable(method: object) -> object:
@@ -51,9 +51,9 @@ def _is_instance_alias_to_inherited_callable(engine: object, name: str, value: o
 
 def _default_callable_for(name: str) -> object | None:
     if name == "run":
-        return _ORIGINAL_EXTERNAL_ADAPTER_RUN
+        return ORIGINAL_EXTERNAL_ADAPTER_RUN
     if name == "run_live":
-        return _ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE
+        return ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE
     return None
 
 
@@ -85,7 +85,7 @@ def _resolve_inherited_callable_rank(engine: object, name: str, resolved: object
     return None
 
 
-def _has_callable_override(engine: object, name: str, default: object) -> bool:
+def has_callable_override(engine: object, name: str, default: object) -> bool:
     method = getattr(engine, name, None)
     if not callable(method):
         return False
@@ -131,9 +131,9 @@ def _has_callable_override(engine: object, name: str, default: object) -> bool:
         and name in instance_dict
     ):
         return True
-    if name == "run" and resolved is _ORIGINAL_EXTERNAL_ADAPTER_RUN:
+    if name == "run" and resolved is ORIGINAL_EXTERNAL_ADAPTER_RUN:
         return False
-    if name == "run_live" and resolved is _ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE:
+    if name == "run_live" and resolved is ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE:
         return False
     if isinstance(instance_dict, dict) and name in instance_dict:
         value = instance_dict[name]
@@ -200,8 +200,8 @@ def _callable_resolution_rank(engine: object, name: str) -> int | None:
     return None
 
 
-def _prefers_non_live_run(engine: object) -> bool:
-    if not _has_callable_override(engine, "run", _ORIGINAL_EXTERNAL_ADAPTER_RUN):
+def prefers_non_live_run(engine: object) -> bool:
+    if not has_callable_override(engine, "run", ORIGINAL_EXTERNAL_ADAPTER_RUN):
         return False
     run_rank = _callable_resolution_rank(engine, "run")
     run_live_rank = _callable_resolution_rank(engine, "run_live")
@@ -212,11 +212,11 @@ def _prefers_non_live_run(engine: object) -> bool:
     return run_rank < run_live_rank
 
 
-def _supports_on_started(engine: object) -> bool:
+def supports_on_started(engine: object) -> bool:
     return _supports_callable_kwarg(getattr(engine, "run", None), "on_started")
 
 
-def _supports_live_on_started(engine: object) -> bool:
+def supports_live_on_started(engine: object) -> bool:
     return _supports_callable_kwarg(getattr(engine, "run_live", None), "on_started")
 
 
@@ -235,7 +235,7 @@ def _supports_callable_kwarg(method: object, name: str) -> bool:
     )
 
 
-def _filter_supported_kwargs(method: object, kwargs: dict[str, object]) -> dict[str, object]:
+def filter_supported_kwargs(method: object, kwargs: dict[str, object]) -> dict[str, object]:
     if not callable(method) or not kwargs:
         return kwargs
     try:
@@ -251,7 +251,7 @@ def _filter_supported_kwargs(method: object, kwargs: dict[str, object]) -> dict[
     return {key: value for key, value in kwargs.items() if key in supported}
 
 
-def _effective_engine_callable(engine: object, name: str) -> object | None:
+def effective_engine_callable(engine: object, name: str) -> object | None:
     method = getattr(engine, name, None)
     if not callable(method):
         return None
