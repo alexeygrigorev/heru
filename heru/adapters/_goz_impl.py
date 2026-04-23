@@ -9,8 +9,22 @@ logger = logging.getLogger("litehive.agents.adapters.goz")
 
 
 def goz_session_id(payload: dict[str, object]) -> str | None:
-    session_id = payload.get("sessionID")
-    return session_id if isinstance(session_id, str) and session_id else None
+    for key in ("sessionID", "session_id"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    part = payload.get("part")
+    if isinstance(part, dict):
+        for key in ("sessionID", "session_id"):
+            value = part.get(key)
+            if isinstance(value, str) and value:
+                return value
+        continuation = part.get("continuation")
+        if isinstance(continuation, dict):
+            resume = continuation.get("resume_session_id") or continuation.get("resumeSessionId")
+            if isinstance(resume, str) and resume:
+                return resume
+    return None
 
 
 def goz_continuation(payload: dict[str, object]) -> RuntimeEngineContinuation | None:

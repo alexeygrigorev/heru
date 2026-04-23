@@ -1,10 +1,12 @@
 """Proactive Copilot quota checking via GitHub API."""
 
+from dataclasses import dataclass
 import json
 import logging
 import subprocess
 import time
-from dataclasses import dataclass
+
+from heru.quota._shared import UsageWindow, normalize_reset_at
 
 logger = logging.getLogger(__name__)
 
@@ -13,17 +15,32 @@ _CACHE_TTL_SECONDS = 60
 
 @dataclass(slots=True)
 class CopilotQuotaStatus:
-    limit_reached: bool = False
-    premium_remaining: int = 0
-    premium_entitlement: int = 0
+    premium_remaining: int | None = None
+    premium_entitlement: int | None = None
     premium_percent_remaining: float = 100.0
     quota_reset_date: str | None = None
     checked_at: float = 0.0
     error: str | None = None
 
+    def __post_init__(self) -> None:
+        self.premium_percent_remaining = float(self.premium_percent_remaining)
+        self.quota_reset_date = normalize_reset_at(self.quota_reset_date)
+
     @property
     def used_percent(self) -> float:
-        return 100.0 - self.premium_percent_remaining
+        return max(0.0, 100.0 - self.premium_percent_remaining)
+
+    @property
+    def limit_reached(self) -> bool:
+        return self.error is None and self.premium_percent_remaining <= 20.0
+
+    @property
+    def short_term(self) -> UsageWindow:
+        return UsageWindow(percent_remaining=100.0)
+
+    @property
+    def long_term(self) -> UsageWindow:
+        return UsageWindow(percent_remaining=self.premium_percent_remaining, reset_at=self.quota_reset_date)
 
 
 _cached_status: CopilotQuotaStatus | None = None
@@ -33,7 +50,9 @@ def _fetch_quota(*, timeout: float = 10.0) -> CopilotQuotaStatus:
     try:
         result = subprocess.run(
             ["gh", "api", "/copilot_internal/user"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
         if result.returncode != 0:
             return CopilotQuotaStatus(checked_at=time.monotonic(), error=f"gh exit {result.returncode}")
@@ -44,25 +63,20 @@ def _fetch_quota(*, timeout: float = 10.0) -> CopilotQuotaStatus:
         logger.warning("copilot quota check failed (fail-open): %s", exc)
         return CopilotQuotaStatus(checked_at=time.monotonic(), error=str(exc))
 
-    snapshots = data.get("quota_snapshots", {})
-    premium = snapshots.get("premium_interactions", {})
+    snapshots = data.get("quota_snapshots")
+    if not isinstance(snapshots, dict):
+        snapshots = {}
+    premium = snapshots.get("premium_interactions")
+    if not isinstance(premium, dict):
+        premium = {}
 
     if premium.get("unlimited", False):
-        return CopilotQuotaStatus(
-            premium_percent_remaining=100.0,
-            checked_at=time.monotonic(),
-        )
-
-    remaining = int(premium.get("remaining", 0))
-    entitlement = int(premium.get("entitlement", 0))
-    pct_remaining = float(premium.get("percent_remaining", 100.0))
-    limit_reached = pct_remaining <= 20
+        return CopilotQuotaStatus(checked_at=time.monotonic())
 
     return CopilotQuotaStatus(
-        limit_reached=limit_reached,
-        premium_remaining=remaining,
-        premium_entitlement=entitlement,
-        premium_percent_remaining=pct_remaining,
+        premium_remaining=premium.get("remaining") if isinstance(premium.get("remaining"), int) else None,
+        premium_entitlement=premium.get("entitlement") if isinstance(premium.get("entitlement"), int) else None,
+        premium_percent_remaining=max(0.0, float(premium.get("percent_remaining", 100.0))),
         quota_reset_date=data.get("quota_reset_date"),
         checked_at=time.monotonic(),
     )
@@ -78,7 +92,7 @@ def check_copilot_quota(
     if _cached_status is not None and time.monotonic() - _cached_status.checked_at < cache_ttl:
         return _cached_status
 
-    fetcher = _fetch or _fetch_quota
+    fetcher = _fetch if callable(_fetch) else _fetch_quota
     _cached_status = fetcher()
     return _cached_status
 
@@ -94,8 +108,8 @@ def copilot_quota_block_reason(
         return None  # fail-open
     if status.limit_reached:
         return (
-            f"copilot premium requests low ({status.premium_remaining}/{status.premium_entitlement} "
-            f"remaining, {status.premium_percent_remaining:.0f}%, resets {status.quota_reset_date})"
+            f"copilot premium requests low "
+            f"({status.long_term.percent_remaining:.0f}% remaining, resets {status.long_term.reset_at})"
         )
     return None
 

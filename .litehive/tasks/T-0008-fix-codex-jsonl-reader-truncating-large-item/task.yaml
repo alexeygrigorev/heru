@@ -1,20 +1,11 @@
 id: T-0008
 slug: fix-codex-jsonl-reader-truncating-large-item
 title: Fix codex JSONL reader truncating large item.completed events
-depends_on: []
-task_type: bugfix
-model: null
-mode: tasks
-pipeline_mode: full
-status: done
-flag_reason: null
-flag_count: 0
-pipeline_status: done
-priority: high
-pm_complexity: moderate
-planned_effort: m
 created_at: '2026-04-10T19:33:18+00:00'
-updated_at: '2026-04-10T20:47:21+00:00'
+task_type: bugfix
+pipeline_mode: full
+priority: high
+depends_on: []
 goal: 'heru''s codex adapter reader truncates JSONL lines containing large aggregated_output
   fields, producing ''Unterminated string'' parse errors and silently dropping item.completed
   events. Find the line-length / buffer cap in the codex stream reader and raise or
@@ -33,55 +24,7 @@ plan:
 - Reproduce or localize the failing behavior.
 - Implement the minimal targeted fix.
 - Run focused regression coverage for the affected behavior.
-human_checkpoints: []
-subagents:
-- id: SA-0001
-  role: planner
-  engine: codex
-  status: interrupted
-  path: subagents/SA-0001-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0002
-  role: planner
-  engine: codex
-  status: completed
-  path: subagents/SA-0002-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0003
-  role: swe
-  engine: codex
-  status: completed
-  path: subagents/SA-0003-swe
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0004
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0004-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0005
-  role: reviewer
-  engine: codex
-  status: completed
-  path: subagents/SA-0005-reviewer
-  sandboxed: false
-  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0008 fix-codex-jsonl-reader-truncating-large-item'
-  commit_sha: df7851597ece2c365005f6e58cfdedb53194caa0
-  checkpoint_base_sha: 5b2def20ce6cfae9e1ac4115ffd7f309748f6bc5
-  checkpoint_attempts: 1
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

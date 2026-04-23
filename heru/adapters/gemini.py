@@ -12,15 +12,10 @@ from heru.adapters._gemini_impl import (
     gemini_stream_event_adapter,
     gemini_usage_window,
 )
-from heru.adapters.common import classify_execution_limit
 from heru.base import (
-    CLIExecutionResult,
     ExternalCLIAdapter,
-    extract_jsonl_errors,
     extract_jsonl_messages,
-    iter_jsonl_payloads,
 )
-from heru.types import RuntimeEngineContinuation, UnifiedEvent
 
 
 class GeminiCLIAdapter(ExternalCLIAdapter):
@@ -33,9 +28,8 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
         strips_environment=False,
         transcript_format="jsonl",
     )
-
-    def supports_continue_latest(self) -> bool:
-        return True
+    SUPPORTS_CONTINUE_LATEST = True
+    USAGE_PROVIDER = "google"
 
     def build_command(
         self,
@@ -55,54 +49,27 @@ class GeminiCLIAdapter(ExternalCLIAdapter):
             command.extend(["-m", model])
         return command
 
-    def render_transcript(self, execution: CLIExecutionResult) -> str:
-        return self.render_transcript_from_parts(
-            execution,
-            assistant_text=extract_jsonl_messages(execution.stdout),
-        )
+    def transcript_assistant_text(self, execution) -> str:
+        return extract_jsonl_messages(execution.stdout)
 
-    def extract_usage_observation(self, execution: CLIExecutionResult):
-        payloads = iter_jsonl_payloads(execution.stdout)
-        metadata: dict[str, str | int | bool | None] = {}
-        usage = None
-        limit_reason = None
-        for payload in reversed(payloads):
-            if usage is None:
-                usage = gemini_usage_window(payload, metadata)
-            if limit_reason is None:
-                error_message, error_metadata, error_usage = gemini_error_details(payload)
-                if error_metadata:
-                    metadata.update(error_metadata)
-                if usage is None and error_usage is not None:
-                    usage = error_usage
-                if error_message:
-                    metadata.setdefault("error_message", error_message)
-                    limit_reason = classify_execution_limit(error_message)
-            if payload.get("type") == "init":
-                model = payload.get("model")
-                if isinstance(model, str) and model:
-                    metadata.setdefault("model", model)
-        return self.usage_observation_from_scan(
-            execution,
-            provider="google",
-            usage=usage,
-            limit_reason=limit_reason,
-            metadata=metadata,
-            saw_payloads=bool(payloads),
-            stderr_limit_extractor=lambda stderr, _: classify_execution_limit(stderr),
-        )
+    def usage_window_from_payload(self, payload, metadata):
+        return gemini_usage_window(payload, metadata)
+
+    def error_details_from_payload(self, payload):
+        return gemini_error_details(payload)
+
+    def update_usage_metadata_from_payload(self, payload, metadata) -> None:
+        if payload.get("type") != "init":
+            return
+        model = payload.get("model")
+        if isinstance(model, str) and model:
+            metadata.setdefault("model", model)
+
+    def classify_stderr_limit(self, stderr, metadata):
+        return self.classify_limit_text(stderr, metadata)
 
     def stream_event_adapter(self):
         return gemini_stream_event_adapter()
 
-    def translate_native_event(
-        self,
-        native_payload: dict[str, object],
-    ) -> UnifiedEvent | None:
-        return super().translate_native_event(native_payload)
-
-    def extract_continuation(
-        self,
-        execution: CLIExecutionResult | None,
-    ) -> RuntimeEngineContinuation | None:
-        return self.extract_continuation_from_payloads(execution, gemini_continuation)
+    def continuation_from_payload(self, payload):
+        return gemini_continuation(payload)

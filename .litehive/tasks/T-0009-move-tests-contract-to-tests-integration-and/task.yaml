@@ -1,20 +1,11 @@
 id: T-0009
 slug: move-tests-contract-to-tests-integration-and
 title: Move tests/contract/ to tests_integration/ and document the split
-depends_on: []
-task_type: refactor
-model: null
-mode: tasks
-pipeline_mode: full
-status: wont_do
-flag_reason: null
-flag_count: 0
-pipeline_status: backlog
-priority: medium
-pm_complexity: simple
-planned_effort: s
 created_at: '2026-04-10T20:44:36+00:00'
-updated_at: '2026-04-10T20:46:21+00:00'
+task_type: refactor
+pipeline_mode: full
+priority: medium
+depends_on: []
 goal: 'T-0007 shipped tests/contract/ under an earlier goal. heru''s rule is that
   tests/ must be standalone (no ''from litehive'' imports, no real engine subprocess
   calls), so contract-style tests belong in a separate top-level folder. Move tests/contract/
@@ -40,20 +31,7 @@ plan:
 - Identify the narrow seam to refactor and the behavior that must stay stable.
 - Restructure the code in small, reviewable steps.
 - Run focused verification to confirm behavior is preserved.
-human_checkpoints: []
-subagents: []
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0009 move-tests-contract-to-tests-integration-and'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

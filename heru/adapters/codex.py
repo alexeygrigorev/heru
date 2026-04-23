@@ -1,30 +1,19 @@
-"""Public Codex adapter module.
-
-The ``CodexCLIAdapter`` class defined here is part of heru's stable
-public adapter contract. The imported ``_codex_impl`` helpers are
-internal implementation details.
-"""
+"""Public Codex adapter module."""
 
 import logging
 from pathlib import Path
 
-from heru.adapters.common import classify_execution_limit
 from heru.adapters._codex_impl import (
     classify_codex_usage_limit as _classify_codex_usage_limit,
     codex_continuation,
     codex_error_details,
     extract_codex_errors,
-    extract_codex_messages,
     iter_codex_payloads,
     codex_stderr_limit,
     codex_stream_event_adapter,
     codex_usage_window,
 )
-from heru.base import (
-    CLIExecutionResult,
-    ExternalCLIAdapter,
-)
-from heru.types import RuntimeEngineContinuation, UnifiedEvent
+from heru.base import ExternalCLIAdapter
 
 
 logger = logging.getLogger("litehive.agents.adapters.codex")
@@ -62,9 +51,9 @@ class CodexCLIAdapter(ExternalCLIAdapter):
         strips_environment=False,
         transcript_format="jsonl",
     )
-
-    def supports_continue_latest(self) -> bool:
-        return True
+    SUPPORTS_CONTINUE_LATEST = True
+    TRANSCRIPT_EMPTY_ON_PARSED_PAYLOADS = True
+    USAGE_PROVIDER = "openai"
 
     def build_command(
         self,
@@ -93,52 +82,38 @@ class CodexCLIAdapter(ExternalCLIAdapter):
             command.extend(["--cd", str(cwd)])
         if model:
             command.extend(["--model", model])
-        if resume_session_id and not latest_resume:
+        if latest_resume:
+            command.append("--last")
+        elif resume_session_id:
             command.append(resume_session_id)
         command.append(prompt)
         return command
 
-    def render_transcript(self, execution: CLIExecutionResult) -> str:
-        assistant_text = extract_codex_messages(execution.stdout)
-        error_text = "\n".join(extract_codex_errors(execution.stdout)).strip()
-        if assistant_text or error_text:
-            parts = [part for part in (assistant_text, error_text) if part]
-            if execution.stderr.strip():
-                parts.append(f"[stderr]\n{execution.stderr.strip()}")
-            return "\n\n".join(parts)
-        if iter_codex_payloads(execution.stdout):
-            return f"[stderr]\n{execution.stderr.strip()}" if execution.stderr.strip() else ""
-        return execution.transcript
+    def transcript_assistant_text(self, execution) -> str:
+        return _extract_codex_transcript(execution.stdout)
 
-    def extract_usage_observation(self, execution: CLIExecutionResult):
-        payloads = iter_codex_payloads(execution.stdout)
-        metadata: dict[str, str | int | bool | None] = {}
-        usage = None
-        limit_reason = None
-        for payload in reversed(payloads):
-            if usage is None:
-                usage = codex_usage_window(payload, metadata)
-            if limit_reason is None:
-                error_message, error_metadata = codex_error_details(payload)
-                if error_metadata:
-                    metadata.update(error_metadata)
-                if error_message:
-                    metadata.setdefault("error_message", error_message)
-                    codex_limit = _classify_codex_usage_limit(error_message)
-                    limit_reason = codex_limit.limit_reason if codex_limit else classify_execution_limit(error_message)
-                    if codex_limit and codex_limit.retry_at:
-                        metadata.setdefault("retry_at_hint", codex_limit.retry_at)
-                    if codex_limit and codex_limit.purchase_more_credits:
-                        metadata.setdefault("purchase_more_credits", True)
-        return self.usage_observation_from_scan(
-            execution,
-            provider="openai",
-            usage=usage,
-            limit_reason=limit_reason,
-            metadata=metadata,
-            saw_payloads=bool(payloads),
-            stderr_limit_extractor=codex_stderr_limit,
-        )
+    def transcript_error_text(self, execution) -> str:
+        return "\n".join(extract_codex_errors(execution.stdout)).strip()
+
+    def usage_window_from_payload(self, payload, metadata):
+        return codex_usage_window(payload, metadata)
+
+    def error_details_from_payload(self, payload):
+        error_message, error_metadata = codex_error_details(payload)
+        return error_message, error_metadata, None
+
+    def classify_limit_text(self, text, metadata):
+        codex_limit = _classify_codex_usage_limit(text)
+        if codex_limit is not None:
+            if codex_limit.retry_at:
+                metadata.setdefault("retry_at_hint", codex_limit.retry_at)
+            if codex_limit.purchase_more_credits:
+                metadata.setdefault("purchase_more_credits", True)
+            return codex_limit.limit_reason
+        return super().classify_limit_text(text, metadata)
+
+    def classify_stderr_limit(self, stderr, metadata):
+        return codex_stderr_limit(stderr, metadata)
 
     def stream_event_adapter(self):
         return codex_stream_event_adapter()
@@ -149,20 +124,5 @@ class CodexCLIAdapter(ExternalCLIAdapter):
     def _iter_live_native_payloads(self, stdout: str) -> list[dict[str, object]]:
         return iter_codex_payloads(stdout, allow_incomplete_trailing=True)
 
-    def translate_native_event(
-        self,
-        native_payload: dict[str, object],
-    ) -> UnifiedEvent | None:
-        return super().translate_native_event(native_payload)
-
-    def extract_continuation(
-        self,
-        execution: CLIExecutionResult | None,
-    ) -> RuntimeEngineContinuation | None:
-        if execution is None or not execution.stdout.strip():
-            return None
-        for payload in iter_codex_payloads(execution.stdout):
-            continuation = codex_continuation(payload)
-            if continuation is not None:
-                return continuation
-        return None
+    def continuation_from_payload(self, payload):
+        return codex_continuation(payload)

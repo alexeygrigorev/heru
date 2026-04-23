@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
 import logging
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 
-import urllib.request
 import urllib.error
+import urllib.request
+
+from heru.quota._shared import UsageWindow, normalize_reset_at
 
 logger = logging.getLogger(__name__)
 
@@ -23,27 +25,40 @@ class CodexQuotaWindow:
     used_percent: float = 0.0
     reset_at: str | None = None
 
+    def __post_init__(self) -> None:
+        self.used_percent = float(self.used_percent)
+        self.reset_at = normalize_reset_at(self.reset_at)
+
+    @property
+    def percent_remaining(self) -> float:
+        return max(0.0, 100.0 - self.used_percent)
+
 
 @dataclass(slots=True)
 class CodexQuotaStatus:
-    limit_reached: bool = False
     primary_window: CodexQuotaWindow = field(default_factory=CodexQuotaWindow)
     secondary_window: CodexQuotaWindow = field(default_factory=CodexQuotaWindow)
+    limit_reached: bool = False
     checked_at: float = 0.0
     error: str | None = None
 
     @property
-    def earliest_reset_at(self) -> str | None:
-        if self.primary_window.reset_at and self.secondary_window.reset_at:
-            return max(self.primary_window.reset_at, self.secondary_window.reset_at)
-        return self.primary_window.reset_at or self.secondary_window.reset_at
+    def short_term(self) -> UsageWindow:
+        return UsageWindow(percent_remaining=100.0)
 
     @property
-    def max_used_percent(self) -> float:
-        return max(self.primary_window.used_percent, self.secondary_window.used_percent)
+    def long_term(self) -> UsageWindow:
+        return UsageWindow(
+            percent_remaining=self.secondary_window.percent_remaining,
+            reset_at=self.secondary_window.reset_at,
+        )
+
+    @property
+    def earliest_reset_at(self) -> str | None:
+        reset_candidates = [value for value in (self.primary_window.reset_at, self.secondary_window.reset_at) if value]
+        return min(reset_candidates) if reset_candidates else None
 
 
-# Module-level cache
 _cached_status: CodexQuotaStatus | None = None
 
 
@@ -65,25 +80,29 @@ def _read_bearer_token(auth_path: Path | None = None) -> str | None:
 
 
 def _parse_quota_response(data: dict) -> CodexQuotaStatus:
-    rate_limit = data.get("rate_limit", {})
-    limit_reached = bool(rate_limit.get("limit_reached", False))
+    rate_limit = data.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        rate_limit = {}
+    primary_data = rate_limit.get("primary_window")
+    if not isinstance(primary_data, dict):
+        primary_data = {}
+    secondary_data = rate_limit.get("secondary_window")
+    if not isinstance(secondary_data, dict):
+        secondary_data = {}
 
-    primary_data = rate_limit.get("primary_window", {})
-    secondary_data = rate_limit.get("secondary_window", {})
-
-    primary = CodexQuotaWindow(
-        used_percent=float(primary_data.get("used_percent", 0)),
-        reset_at=str(primary_data["reset_at"]) if "reset_at" in primary_data else None,
+    primary_window = CodexQuotaWindow(
+        used_percent=primary_data.get("used_percent", 0),
+        reset_at=primary_data.get("reset_at"),
     )
-    secondary = CodexQuotaWindow(
-        used_percent=float(secondary_data.get("used_percent", 0)),
-        reset_at=str(secondary_data["reset_at"]) if "reset_at" in secondary_data else None,
+    secondary_window = CodexQuotaWindow(
+        used_percent=secondary_data.get("used_percent", 0),
+        reset_at=secondary_data.get("reset_at"),
     )
 
     return CodexQuotaStatus(
-        limit_reached=limit_reached,
-        primary_window=primary,
-        secondary_window=secondary,
+        primary_window=primary_window,
+        secondary_window=secondary_window,
+        limit_reached=bool(rate_limit.get("limit_reached", False)) or secondary_window.used_percent >= 80.0,
         checked_at=time.monotonic(),
     )
 
@@ -128,11 +147,8 @@ def check_codex_quota(
         _cached_status = status
         return status
 
-    if callable(_fetch):
-        status = _fetch(token)
-    else:
-        status = _fetch_quota(token)
-
+    fetcher = _fetch if callable(_fetch) else _fetch_quota
+    status = fetcher(token)
     _cached_status = status
     return status
 
@@ -148,8 +164,8 @@ def codex_quota_block_reason(
     if status.error is not None:
         return None  # fail-open
     if status.limit_reached:
-        reset_info = f", resets at {status.earliest_reset_at}" if status.earliest_reset_at else ""
-        return f"codex quota exhausted (used {status.max_used_percent:.0f}%{reset_info})"
+        reset_info = f", resets {status.long_term.reset_at}" if status.long_term.reset_at else ""
+        return f"codex quota exhausted (weekly window at {status.long_term.used_percent:.0f}%{reset_info})"
     return None
 
 

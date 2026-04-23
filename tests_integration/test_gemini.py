@@ -19,5 +19,5 @@ def test_gemini_smoke_prompt_succeeds(gemini_smoke_session) -> None:
     assert smoke_token("gemini") in gemini_smoke_session.engine.render_transcript(gemini_smoke_session.execution)
 
 
-def test_gemini_continue_latest_succeeds(integration_root) -> None:
-    assert_continue_latest_smoke("gemini", cwd=integration_root)
+def test_gemini_continue_latest_succeeds(gemini_smoke_session) -> None:
+    assert_continue_latest_smoke(gemini_smoke_session)

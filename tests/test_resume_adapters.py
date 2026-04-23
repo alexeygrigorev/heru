@@ -9,8 +9,8 @@ from heru.base import LATEST_CONTINUATION_SENTINEL
 @pytest.mark.parametrize(
     ("engine_name", "expected_argv"),
     [
-        ("codex", ["codex", "exec", "resume", "--json", "--dangerously-bypass-approvals-and-sandbox", "--skip-git-repo-check", "continue please"]),
-        ("claude", ["claude", "--resume", "-p", "continue please", "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--dangerously-skip-permissions"]),
+        ("codex", ["codex", "exec", "resume", "--json", "--dangerously-bypass-approvals-and-sandbox", "--skip-git-repo-check", "--last", "continue please"]),
+        ("claude", ["claude", "--continue", "-p", "continue please", "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--dangerously-skip-permissions"]),
         ("copilot", ["copilot", "-p", "continue please", "--output-format", "json", "--allow-all-tools", "--autopilot", "--no-auto-update", "--add-dir", "/tmp/workspace", "--continue"]),
         ("gemini", ["gemini", "-p", "continue please", "--output-format", "stream-json", "--yolo", "--resume"]),
         ("opencode", ["opencode", "run", "--format", "json", "--dir", "/tmp/workspace", "--continue", "continue please"]),

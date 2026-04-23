@@ -1,0 +1,15 @@
+Reading additional input from stdin...
+2026-04-11T07:40:05.970589Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/alexey/git/litehive/tests/test_observability_and_status.py:
+        lambda: SimpleNamespace(
+            error=None,
+            limit_reached=False,
+            premium_remaining=85,
+            premium_entitlement=100,
+            quota_reset_date="2026-04-10",
+        ),
+    )
+2026-04-11T07:42:38.498523Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/alexey/git/litehive/tests/test_codex_quota.py:
+    assert status.max_used_percent == 20.0
+2026-04-11T07:42:44.063922Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/alexey/git/heru/.litehive/worktrees/T-0014-normalize-heru-usage-to-short-long-term-windows/tests/test_codex_quota.py:
+def test_claude_parse_usage_response_flags_limits() -> None:
+2026-04-11T07:46:01.803395Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open

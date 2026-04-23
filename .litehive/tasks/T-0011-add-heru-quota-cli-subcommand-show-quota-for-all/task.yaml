@@ -1,20 +1,11 @@
 id: T-0011
 slug: add-heru-quota-cli-subcommand-show-quota-for-all
 title: 'Add ''heru quota'' CLI subcommand: show quota for all or one engine'
-depends_on: []
-task_type: adapter
-model: null
-mode: tasks
-pipeline_mode: full
-status: wont_do
-flag_reason: null
-flag_count: 0
-pipeline_status: backlog
-priority: medium
-pm_complexity: simple
-planned_effort: s
 created_at: '2026-04-10T20:49:26+00:00'
-updated_at: '2026-04-10T20:50:05+00:00'
+task_type: adapter
+pipeline_mode: full
+priority: medium
+depends_on: []
 goal: "Add a new CLI subcommand to heru: 'heru quota' prints quota status for every\
   \ registered provider (codex, claude, copilot, zai which covers opencode+goz), and\
   \ 'heru quota <name>' prints quota for one. Build on the existing heru/quota/ Python\
@@ -52,20 +43,7 @@ plan:
 - Inspect the existing adapter interface, config wiring, and invocation flow.
 - Implement the adapter change close to the integration seam.
 - Verify the adapter path with a focused test or representative run.
-human_checkpoints: []
-subagents: []
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0011 add-heru-quota-cli-subcommand-show-quota-for-all'
-  commit_sha: null
-  checkpoint_base_sha: null
-  checkpoint_attempts: 0
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

@@ -19,5 +19,5 @@ def test_codex_smoke_prompt_succeeds(codex_smoke_session) -> None:
     assert smoke_token("codex") in codex_smoke_session.engine.render_transcript(codex_smoke_session.execution)
 
 
-def test_codex_continue_latest_succeeds(integration_root) -> None:
-    assert_continue_latest_smoke("codex", cwd=integration_root)
+def test_codex_continue_latest_succeeds(codex_smoke_session) -> None:
+    assert_continue_latest_smoke(codex_smoke_session)

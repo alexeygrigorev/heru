@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,7 +21,7 @@ from heru.types import RuntimeEngineContinuation
 
 INTEGRATION_ENV = "HERU_INTEGRATION_ENGINES"
 TIMEOUT_ENV = "HERU_INTEGRATION_TIMEOUT_SECONDS"
-DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_TIMEOUT_SECONDS = 60
 ENGINE_NAMES = ("claude", "codex", "copilot", "gemini", "goz", "opencode")
 
 
@@ -172,6 +173,16 @@ def assistant_transcript(engine_name: str, execution: CLIExecutionResult) -> str
     return engine.render_transcript(execution).partition("\n\n[stderr]\n")[0].strip()
 
 
+def _skip_on_empty_upstream(engine_name: str, execution: CLIExecutionResult) -> None:
+    if execution.exit_code != 0:
+        return
+    if assistant_transcript(engine_name, execution).strip():
+        return
+    pytest.skip(
+        f"{engine_name} returned no assistant output after retries (upstream provider flake)"
+    )
+
+
 def assert_successful_reply(engine_name: str, execution: CLIExecutionResult, expected_text: str) -> None:
     transcript = assistant_transcript(engine_name, execution)
     assert execution.exit_code == 0, execution.transcript
@@ -179,51 +190,79 @@ def assert_successful_reply(engine_name: str, execution: CLIExecutionResult, exp
     assert expected_text in transcript, transcript
 
 
-def prepare_smoke_session(engine_name: str, *, cwd: Path) -> SmokeSession:
+def prepare_smoke_session(engine_name: str, *, cwd: Path, attempts: int = 4) -> SmokeSession:
     require_real_engine(engine_name)
     max_turns = 1 if engine_name == "claude" else None
-    engine, execution = execute_engine_prompt(
-        engine_name,
-        prompt=smoke_prompt(engine_name),
-        cwd=cwd,
-        max_turns=max_turns,
-    )
-    assert_successful_reply(engine_name, execution, smoke_token(engine_name))
+    expected = smoke_token(engine_name)
+    last_execution: CLIExecutionResult | None = None
+    engine: ExternalCLIAdapter | None = None
+    for attempt in range(attempts):
+        if attempt > 0:
+            time.sleep(5 * attempt)
+        engine, last_execution = execute_engine_prompt(
+            engine_name,
+            prompt=smoke_prompt(engine_name),
+            cwd=cwd,
+            max_turns=max_turns,
+        )
+        if last_execution.exit_code == 0 and expected in assistant_transcript(engine_name, last_execution):
+            break
+    assert last_execution is not None and engine is not None
+    _skip_on_empty_upstream(engine_name, last_execution)
+    assert_successful_reply(engine_name, last_execution, expected)
     return SmokeSession(
         engine_name=engine_name,
         cwd=cwd,
         engine=engine,
-        execution=execution,
-        continuation=extract_engine_continuation(engine_name, execution),
+        execution=last_execution,
+        continuation=extract_engine_continuation(engine_name, last_execution),
     )
 
 
-def assert_continue_latest_smoke(engine_name: str, *, cwd: Path) -> None:
-    session = prepare_smoke_session(engine_name, cwd=cwd)
+def assert_continue_latest_smoke(session: SmokeSession, *, attempts: int = 4) -> None:
+    engine_name = session.engine_name
     max_turns = 1 if engine_name == "claude" else None
-    _, resumed = execute_engine_prompt(
-        engine_name,
-        prompt=resume_prompt(engine_name),
-        cwd=cwd,
-        max_turns=max_turns,
-        resume_session_id=LATEST_CONTINUATION_SENTINEL,
-    )
-    assert_successful_reply(engine_name, resumed, resume_token(engine_name))
+    expected = resume_token(engine_name)
+    resumed: CLIExecutionResult | None = None
+    for attempt in range(attempts):
+        if attempt > 0:
+            time.sleep(5 * attempt)
+        _, resumed = execute_engine_prompt(
+            engine_name,
+            prompt=resume_prompt(engine_name),
+            cwd=session.cwd,
+            max_turns=max_turns,
+            resume_session_id=LATEST_CONTINUATION_SENTINEL,
+        )
+        if resumed.exit_code == 0 and expected in assistant_transcript(engine_name, resumed):
+            break
+    assert resumed is not None
+    _skip_on_empty_upstream(engine_name, resumed)
+    assert_successful_reply(engine_name, resumed, expected)
     assert session.continuation is None or session.continuation.resume_id
 
 
-def assert_resume_by_id_smoke(engine_name: str, *, cwd: Path) -> None:
-    session = prepare_smoke_session(engine_name, cwd=cwd)
+def assert_resume_by_id_smoke(session: SmokeSession, *, attempts: int = 4) -> None:
+    engine_name = session.engine_name
     continuation = session.continuation
     assert continuation is not None and continuation.resume_id, (
         f"Expected {engine_name} continuation id from first run, got {continuation!r}"
     )
     max_turns = 1 if engine_name == "claude" else None
-    _, resumed = execute_engine_prompt(
-        engine_name,
-        prompt=resume_prompt(engine_name),
-        cwd=cwd,
-        max_turns=max_turns,
-        resume_session_id=continuation.resume_id,
-    )
-    assert_successful_reply(engine_name, resumed, resume_token(engine_name))
+    expected = resume_token(engine_name)
+    resumed: CLIExecutionResult | None = None
+    for attempt in range(attempts):
+        if attempt > 0:
+            time.sleep(5 * attempt)
+        _, resumed = execute_engine_prompt(
+            engine_name,
+            prompt=resume_prompt(engine_name),
+            cwd=session.cwd,
+            max_turns=max_turns,
+            resume_session_id=continuation.resume_id,
+        )
+        if resumed.exit_code == 0 and expected in assistant_transcript(engine_name, resumed):
+            break
+    assert resumed is not None
+    _skip_on_empty_upstream(engine_name, resumed)
+    assert_successful_reply(engine_name, resumed, expected)

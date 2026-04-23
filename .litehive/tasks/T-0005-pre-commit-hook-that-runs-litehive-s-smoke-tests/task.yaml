@@ -1,20 +1,11 @@
 id: T-0005
 slug: pre-commit-hook-that-runs-litehive-s-smoke-tests
 title: Pre-commit hook that runs litehive's smoke tests against staged heru changes
-depends_on: []
-task_type: null
-model: null
-mode: implementation
-pipeline_mode: full
-status: done
-flag_reason: null
-flag_count: 0
-pipeline_status: done
-priority: high
-pm_complexity: simple
-planned_effort: s
 created_at: '2026-04-10T18:52:51+00:00'
-updated_at: '2026-04-10T20:14:57+00:00'
+task_type: null
+pipeline_mode: full
+priority: high
+depends_on: []
 goal: "heru is depended on by litehive via an editable path install. Any change to\
   \ heru that breaks litehive's contract (e.g. renames a method, changes argv ordering,\
   \ removes a class) silently breaks litehive on the next run. Install a git pre-commit\
@@ -41,62 +32,7 @@ acceptance_criteria:
   skip it with --no-verify when intentional, and what the litehive contract is
 constraints: []
 plan: []
-human_checkpoints: []
-subagents:
-- id: SA-0001
-  role: planner
-  engine: codex
-  status: completed
-  path: subagents/SA-0001-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0002
-  role: swe
-  engine: codex
-  status: completed
-  path: subagents/SA-0002-swe
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0003
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0003-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0004
-  role: recovery
-  engine: codex
-  status: completed
-  path: subagents/SA-0004-recovery
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0005
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0005-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0006
-  role: reviewer
-  engine: codex
-  status: completed
-  path: subagents/SA-0006-reviewer
-  sandboxed: false
-  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0005 pre-commit-hook-that-runs-litehive-s-smoke-tests'
-  commit_sha: fc3eec40b078184e7aa308b5f7df3d5ee6705284
-  checkpoint_base_sha: 2bf30b14a6fb8634fafce3d73a3d0347ccd4d95c
-  checkpoint_attempts: 1
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

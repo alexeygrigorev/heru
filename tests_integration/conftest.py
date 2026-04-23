@@ -1,6 +1,22 @@
+import os
 from pathlib import Path
 
 import pytest
+
+from tests_integration.helpers import INTEGRATION_ENV
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _enable_all_integration_engines():
+    previous = os.environ.get(INTEGRATION_ENV)
+    os.environ[INTEGRATION_ENV] = "all"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(INTEGRATION_ENV, None)
+        else:
+            os.environ[INTEGRATION_ENV] = previous
 
 
 @pytest.fixture

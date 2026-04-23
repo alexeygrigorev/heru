@@ -69,7 +69,7 @@ def test_claude_build_invocation_continue_latest_shape(tmp_path: Path) -> None:
 
     assert list(invocation.argv) == [
         "claude",
-        "--resume",
+        "--continue",
         "-p",
         "ship it",
         "--output-format",

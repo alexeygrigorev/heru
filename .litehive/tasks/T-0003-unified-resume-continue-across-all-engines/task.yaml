@@ -1,21 +1,12 @@
 id: T-0003
 slug: unified-resume-continue-across-all-engines
 title: Unified --resume/--continue across all engines
+created_at: '2026-04-10T18:49:27+00:00'
+task_type: null
+pipeline_mode: full
+priority: high
 depends_on:
 - T-0001
-task_type: null
-model: null
-mode: implementation
-pipeline_mode: full
-status: done
-flag_reason: null
-flag_count: 0
-pipeline_status: done
-priority: high
-pm_complexity: simple
-planned_effort: s
-created_at: '2026-04-10T18:49:27+00:00'
-updated_at: '2026-04-10T19:43:51+00:00'
 goal: Every supported engine has native session resume (codex exec resume, claude
   --resume, gemini --resume, copilot --continue/--resume, opencode --session/--continue,
   goz --resume-session). Heru's adapters accept a resume_session_id parameter and
@@ -40,48 +31,7 @@ acceptance_criteria:
 - Same test repeated for each engine with a real or fake adapter
 constraints: []
 plan: []
-human_checkpoints: []
-subagents:
-- id: SA-0001
-  role: planner
-  engine: codex
-  status: completed
-  path: subagents/SA-0001-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0002
-  role: swe
-  engine: codex
-  status: completed
-  path: subagents/SA-0002-swe
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0003
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0003-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0004
-  role: reviewer
-  engine: codex
-  status: completed
-  path: subagents/SA-0004-reviewer
-  sandboxed: false
-  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0003 unified-resume-continue-across-all-engines'
-  commit_sha: 0d4607f3d6efe8175cbca0080794f3602fa89736
-  checkpoint_base_sha: 28c50365c169e9c5d560fa0f3018ea0d33e39617
-  checkpoint_attempts: 1
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

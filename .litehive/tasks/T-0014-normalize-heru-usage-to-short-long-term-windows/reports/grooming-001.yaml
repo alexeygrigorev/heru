@@ -1,0 +1,111 @@
+task_id: T-0014
+step: grooming
+verdict: pass
+source: agent
+summary: PASS after repo inspection only; no code changes and no tests run in grooming.
+feedback: "PASS after repo inspection only; no code changes and no tests run in grooming.\n\
+  \nVerified by inspection:\n- heru quota public surface is currently provider-specific\
+  \ in `heru/quota/{codex,claude,copilot,zai}_quota.py`, re-exported through `heru/quota/__init__.py`,\
+  \ and rendered in provider-specific form by `heru/main.py`.\n- litehive consumes\
+  \ those provider-specific shapes through compatibility shims in `litehive/agents/quota/`\
+  \ and direct field access in at least `litehive/pipeline/_models.py`, `litehive/observability/_engine_monitoring.py`,\
+  \ `litehive/web/snapshot.py`, plus tests covering dashboard/status/monitoring paths.\n\
+  - `gemini` remains unsupported in `heru usage` today and should stay that way.\n\
+  - Acceptance criterion wording about \"bump the heru dependency pin in litehive's\
+  \ pyproject.toml\" is slightly mismatched to reality: litehive currently depends\
+  \ on heru via editable path in `[tool.uv.sources]` with no version range. The implementation\
+  \ should still bump heru's package version for the breaking API change and refresh\
+  \ litehive lock metadata; there is no literal version pin to edit in litehive `pyproject.toml`\
+  \ unless the dependency strategy is intentionally changed.\n\nRefactor seam:\n-\
+  \ heru: `heru/quota/*`, `heru/quota/__init__.py`, `heru/main.py`, README, quota\
+  \ tests, usage CLI tests, integration usage tests.\n- litehive: quota compatibility\
+  \ shims under `litehive/agents/quota/`, engine blocking logic in `litehive/pipeline/_models.py`,\
+  \ engine monitoring in `litehive/observability/_engine_monitoring.py`, web/dashboard\
+  \ serialization in `litehive/web/snapshot.py`, and all tests/docs asserting provider-specific\
+  \ quota fields.\n\nBehavior to preserve:\n- proactive quota checks stay fail-open\
+  \ on missing auth / fetch errors\n- `heru usage gemini` still reports `unsupported`\n\
+  - engine runtime usage extraction for execution transcripts is unchanged; this task\
+  \ is about quota/usage status APIs and CLI output, not per-run token accounting\
+  \ models in `heru.types.EngineUsageWindow`\n- litehive engine selection still blocks/freeze-skips\
+  \ engines on high utilization, but the decision source becomes the unified `long_term`\
+  \ window\n\nImplementation plan for next stage:\n1. Introduce one shared heru quota\
+  \ model, exported from `heru.quota`, with exactly two windows: `short_term` and\
+  \ `long_term`. Each window should expose `percent_remaining` and `reset_at`; status\
+  \ should carry shared fields only (`limit_reached`, `checked_at`, `error`, and any\
+  \ truly common helper properties).\n2. Rewrite each provider parser/fetcher to populate\
+  \ that shared model:\n   - codex: `short_term.percent_remaining = 100.0`, `long_term`\
+  \ from weekly signal, UTC-normalized reset\n   - claude: `short_term` from 5h, `long_term`\
+  \ from 7d\n   - copilot: `short_term.percent_remaining = 100.0`, `long_term` from\
+  \ monthly signal, reset normalized to UTC ISO8601\n   - zai: `short_term` from tokens\
+  \ only, drop TIME_LIMIT/api_calls entirely, `long_term.percent_remaining = 100.0`\n\
+  \   - gemini: no quota model, CLI remains unsupported\n3. Update heru blocking helpers\
+  \ and CLI rendering to consume only the unified shape. Human output and `--json`\
+  \ should both expose `short_term` and `long_term` windows directly; remove provider-specific\
+  \ `details.windows` naming and legacy fields.\n4. Remove or replace provider-specific\
+  \ quota/window dataclasses and update re-exports/shims so litehive imports the new\
+  \ shared model rather than old per-provider classes.\n5. Migrate litehive atomically:\n\
+  \   - switch blocking logic to read `long_term`\n   - update engine monitoring metadata/summary\
+  \ generation to store normalized window data instead of `primary_*` / `secondary_*`\n\
+  \   - update dashboard/web snapshot serialization to render the new two-window shape\n\
+  \   - remove all references to `primary_window`, `secondary_window`, `five_hour`,\
+  \ `seven_day`, `api_calls`, `tokens`, `window_hours`, `premium_remaining`, `premium_entitlement`,\
+  \ `quota_reset_date`, `max_used_percent`\n6. Update README/docs and add focused\
+  \ tests first near changed modules, then run full required suites.\n\nVerification\
+  \ required in implementation/testing stages:\n- heru focused tests around quota\
+  \ parsers and `tests/test_heru_cli.py`\n- `uv run pytest` in heru\n- heru integration\
+  \ suite across available engines under `tests_integration/`\n- litehive focused\
+  \ tests for pipeline blocking, monitoring, snapshot/dashboard, and CLI/status output\n\
+  - litehive full `tests/`\n- litehive `tests_integration/` across available engines\n\
+  - litehive contract smoke from `~/git/litehive`: `uv run pytest tests/test_runner_workflow.py\
+  \ tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py\
+  \ -q`\n\nRisks to watch:\n- `litehive/observability/_engine_monitoring.py` currently\
+  \ has duplicated `record_codex_quota_check`; cleanly update both occurrences or\
+  \ collapse duplication as part of this task only if it stays reviewable.\n- reset\
+  \ timestamps are inconsistent today (`quota_reset_date` date-only for copilot, provider-native\
+  \ strings elsewhere); add one normalization helper and use it everywhere.\n- because\
+  \ litehive uses `from heru.quota import *`, removing names will break imports immediately;\
+  \ land heru shared exports and litehive consumer migration together in one implementation\
+  \ pass.\n\nTASK_UPDATE:\n  refactor_seam: \"heru quota/usage status API and litehive\
+  \ quota consumers\"\n  behavior_to_preserve:\n    - \"Quota checks fail open on\
+  \ auth/fetch errors\"\n    - \"Gemini remains unsupported in `heru usage`\"\n  \
+  \  - \"Execution transcript token accounting models stay unchanged\"\n    - \"Litehive\
+  \ blocks on high utilization, now sourced from unified `long_term`\"\n  acceptance_criteria:\n\
+  \    - \"heru exports one shared quota status model with exactly `short_term` and\
+  \ `long_term` windows\"\n    - \"Each window exposes `percent_remaining` and `reset_at`\
+  \ only, with reset timestamps normalized to ISO8601 UTC or `None`\"\n    - \"Provider-specific\
+  \ quota/window dataclasses and provider-specific usage CLI fields are removed\"\n\
+  \    - \"`heru usage` human and `--json` output emit the unified two-window shape\"\
+  \n    - \"litehive has zero runtime or test references to removed provider-specific\
+  \ quota fields\"\n    - \"litehive high-utilization blocking reads from `long_term`\"\
+  \n    - \"heru package version is bumped for the breaking public API change, and\
+  \ litehive dependency metadata/lockfile is refreshed to match the editable-path\
+  \ setup\"\n    - \"Required heru, litehive, integration, and contract suites pass\"\
+  \n  constraints:\n    - \"Keep runtime usage extraction types in `heru.types` out\
+  \ of scope unless a test proves they must change\"\n    - \"Do not broaden into\
+  \ unrelated dashboard or monitoring cleanup beyond the quota-model migration\"\n\
+  \  plan:\n    - \"Add shared quota model and normalization helper in heru\"\n  \
+  \  - \"Map all providers into `short_term`/`long_term`\"\n    - \"Swap heru CLI/readme/tests\
+  \ to unified output\"\n    - \"Migrate litehive quota shims and consumer logic atomically\"\
+  \n    - \"Run focused tests, then full repo and integration suites\"\n  pm_complexity:\
+  \ complex\n  planned_effort: xl"
+submitted_via_cli: true
+files_changed: []
+created_follow_up_task_ids: []
+task_update: {}
+tests:
+  added: 0
+  passing: 0
+warnings: []
+retry_count: 0
+retry_limit: 3
+retry_source: global
+retry_decision: continue
+outcome: null
+outcome_reason_code: null
+outcome_reason: ''
+failure_classification: null
+failure_diagnostics: {}
+resource_limit_event: null
+duration_seconds: 125
+hook_results: []
+created_at: '2026-04-11T07:31:47+00:00'

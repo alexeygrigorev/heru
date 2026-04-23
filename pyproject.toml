@@ -1,6 +1,6 @@
 [project]
 name = "heru"
-version = "0.1.0"
+version = "1.0.0"
 description = "Unified headless CLI for coding agents (codex, claude, copilot, gemini, opencode, goz). One interface, one JSONL output format, one resume mechanism."
 readme = "README.md"
 requires-python = ">=3.11"

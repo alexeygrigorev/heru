@@ -6,12 +6,11 @@ invocation and execution records, and the ``ExternalCLIAdapter`` class.
 """
 
 from collections import OrderedDict
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 import json
 import logging
 import os
 from pathlib import Path
-import re
 import selectors
 import shutil
 import subprocess
@@ -24,9 +23,7 @@ from heru.types import (
     LiveEvent,
     LiveTimeline,
     RuntimeEngineContinuation,
-    SubagentStatus,
     UnifiedEvent,
-    cap_feedback,
     utcnow,
 )
 
@@ -163,6 +160,17 @@ class StreamEventAdapter:
         return self.continuation_id(payload)
 
 
+ObservationMetadata = dict[str, str | int | bool | None]
+
+
+@dataclass(slots=True)
+class UsageScanState:
+    usage: EngineUsageWindow | None = None
+    limit_reason: str | None = None
+    metadata: ObservationMetadata = field(default_factory=dict)
+    done: bool = False
+
+
 class ExternalCLIAdapter:
     """Public base class for stable heru engine adapters.
 
@@ -176,6 +184,10 @@ class ExternalCLIAdapter:
     DEFAULT_BINARY: str | None = None
     DEFAULT_CAPABILITIES = AdapterCapabilities()
     DEFAULT_STRIPPED_ENV_VARS: tuple[str, ...] = ()
+    SUPPORTS_CONTINUE_LATEST = False
+    TRANSCRIPT_EMPTY_ON_PARSED_PAYLOADS = False
+    USAGE_PROVIDER: str | None = None
+    REQUIRE_USAGE_PAYLOADS = False
 
     def __init__(
         self,
@@ -209,7 +221,7 @@ class ExternalCLIAdapter:
         return replace(self.capabilities, available=self.is_available())
 
     def supports_continue_latest(self) -> bool:
-        return False
+        return self.SUPPORTS_CONTINUE_LATEST
 
     def is_latest_continuation(self, resume_session_id: str | None) -> bool:
         return resume_session_id == LATEST_CONTINUATION_SENTINEL
@@ -445,7 +457,42 @@ class ExternalCLIAdapter:
         finally:
             selector.close()
 
+    def extract_stream_transcript_text(
+        self,
+        stdout: str,
+        *,
+        delta_fallback: Callable[[str], list[str]] | None = None,
+    ) -> str:
+        adapter = self.stream_event_adapter()
+        if adapter is None:
+            return ""
+        return extract_stream_transcript(stdout, adapter=adapter, delta_fallback=delta_fallback)
+
+    def extract_stream_error_messages(self, stdout: str) -> list[str]:
+        adapter = self.stream_event_adapter()
+        if adapter is None:
+            return []
+        return extract_stream_errors(stdout, adapter=adapter)
+
+    def transcript_assistant_text(self, execution: CLIExecutionResult) -> str:
+        return ""
+
+    def transcript_error_text(self, execution: CLIExecutionResult) -> str:
+        return ""
+
+    def transcript_empty_on_parsed_payloads(self) -> bool:
+        return self.TRANSCRIPT_EMPTY_ON_PARSED_PAYLOADS
+
     def render_transcript(self, execution: CLIExecutionResult) -> str:
+        assistant_text = self.transcript_assistant_text(execution)
+        error_text = self.transcript_error_text(execution)
+        if assistant_text or error_text or self.transcript_empty_on_parsed_payloads():
+            return self.render_transcript_from_parts(
+                execution,
+                assistant_text=assistant_text,
+                error_text=error_text,
+                empty_on_parsed_payloads=self.transcript_empty_on_parsed_payloads(),
+            )
         return execution.transcript
 
     def render_transcript_from_parts(
@@ -461,7 +508,7 @@ class ExternalCLIAdapter:
             if execution.stderr.strip():
                 parts.append(f"[stderr]\n{execution.stderr.strip()}")
             return "\n\n".join(parts)
-        if empty_on_parsed_payloads and iter_jsonl_payloads(execution.stdout):
+        if empty_on_parsed_payloads and self.iter_native_payloads(execution.stdout):
             return f"[stderr]\n{execution.stderr.strip()}" if execution.stderr.strip() else ""
         return execution.transcript
 
@@ -472,11 +519,11 @@ class ExternalCLIAdapter:
         provider: str,
         usage: EngineUsageWindow | None,
         limit_reason: str | None,
-        metadata: dict[str, str | int | bool | None],
+        metadata: ObservationMetadata,
         saw_payloads: bool,
         require_payloads: bool = False,
         stderr_limit_extractor: Callable[
-            [str, dict[str, str | int | bool | None]],
+            [str, ObservationMetadata],
             str | None,
         ]
         | None = None,
@@ -496,11 +543,96 @@ class ExternalCLIAdapter:
             metadata=metadata,
         )
 
+    def usage_provider(self) -> str | None:
+        return self.USAGE_PROVIDER
+
+    def require_usage_payloads(self) -> bool:
+        return self.REQUIRE_USAGE_PAYLOADS
+
+    def iter_usage_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return self.iter_native_payloads(stdout)
+
+    def usage_window_from_payload(
+        self,
+        payload: dict[str, object],
+        metadata: ObservationMetadata,
+    ) -> EngineUsageWindow | None:
+        return None
+
+    def error_details_from_payload(
+        self,
+        payload: dict[str, object],
+    ) -> tuple[str | None, ObservationMetadata, EngineUsageWindow | None]:
+        return None, {}, None
+
+    def update_usage_metadata_from_payload(
+        self,
+        payload: dict[str, object],
+        metadata: ObservationMetadata,
+    ) -> None:
+        return None
+
+    def classify_limit_text(
+        self,
+        text: str,
+        metadata: ObservationMetadata,
+    ) -> str | None:
+        from heru.adapters.common import classify_execution_limit
+
+        return classify_execution_limit(text)
+
+    def classify_stderr_limit(
+        self,
+        stderr: str,
+        metadata: ObservationMetadata,
+    ) -> str | None:
+        return None
+
+    def scan_usage_payload(
+        self,
+        payload: dict[str, object],
+        state: UsageScanState,
+    ) -> None:
+        if state.usage is None:
+            state.usage = self.usage_window_from_payload(payload, state.metadata)
+        error_message, error_metadata, error_usage = self.error_details_from_payload(payload)
+        if error_metadata:
+            state.metadata.update(error_metadata)
+        if state.usage is None and error_usage is not None:
+            state.usage = error_usage
+        if state.limit_reason is None and error_message:
+            state.metadata.setdefault("error_message", error_message)
+            state.limit_reason = self.classify_limit_text(error_message, state.metadata)
+        self.update_usage_metadata_from_payload(payload, state.metadata)
+
     def extract_usage_observation(
         self,
         execution: CLIExecutionResult,
     ) -> EngineUsageObservation | None:
-        return None
+        provider = self.usage_provider()
+        if provider is None:
+            return None
+        payloads = self.iter_usage_payloads(execution.stdout)
+        state = UsageScanState()
+        for payload in reversed(payloads):
+            self.scan_usage_payload(payload, state)
+            if state.done:
+                break
+        stderr_limit_extractor = (
+            None
+            if type(self).classify_stderr_limit is ExternalCLIAdapter.classify_stderr_limit
+            else self.classify_stderr_limit
+        )
+        return self.usage_observation_from_scan(
+            execution,
+            provider=provider,
+            usage=state.usage,
+            limit_reason=state.limit_reason,
+            metadata=state.metadata,
+            saw_payloads=bool(payloads),
+            require_payloads=self.require_usage_payloads(),
+            stderr_limit_extractor=stderr_limit_extractor,
+        )
 
     def stream_event_adapter(self) -> StreamEventAdapter | None:
         return None
@@ -602,20 +734,31 @@ class ExternalCLIAdapter:
             metadata=event.metadata,
         )
 
+    def continuation_from_payload(
+        self,
+        payload: dict[str, object],
+    ) -> RuntimeEngineContinuation | None:
+        return None
+
+    def iter_continuation_payloads(self, stdout: str) -> list[dict[str, object]]:
+        return self.iter_native_payloads(stdout)
+
     def extract_continuation(
         self,
         execution: CLIExecutionResult | None,
     ) -> RuntimeEngineContinuation | None:
-        return None
+        return self.extract_continuation_from_payloads(execution, self.continuation_from_payload)
 
     def extract_continuation_from_payloads(
         self,
         execution: CLIExecutionResult | None,
         extractor: Callable[[dict[str, object]], RuntimeEngineContinuation | None],
+        payloads: list[dict[str, object]] | None = None,
     ) -> RuntimeEngineContinuation | None:
         if execution is None or not execution.stdout.strip():
             return None
-        for payload in iter_jsonl_payloads(execution.stdout):
+        payload_list = payloads if payloads is not None else self.iter_continuation_payloads(execution.stdout)
+        for payload in payload_list:
             continuation = extractor(payload)
             if continuation is not None:
                 return continuation

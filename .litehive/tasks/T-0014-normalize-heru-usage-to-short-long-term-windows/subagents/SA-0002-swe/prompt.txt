@@ -1,0 +1,443 @@
+Task: T-0014 Normalize heru usage to short/long-term windows and migrate litehive consumers atomically
+Stage: implementing
+Stage owner: swe
+Process profile: Python
+Task type: refactor
+
+Workspace context:
+# heru — Litehive Workspace Context
+
+Process profile: Python
+
+You are editing **heru**, a unified headless CLI for coding agents
+(codex, claude, copilot, gemini, opencode, goz). Read this whole file
+before touching any file in this repository.
+
+## Project
+
+- **Purpose:** a thin adapter layer that wraps each supported agent CLI
+  behind a uniform Python interface, with a unified `heru <engine>
+  <prompt>` command, one JSONL event schema across engines, and one
+  resume mechanism. heru is the engine-I/O layer; it knows nothing
+  about task queues, stages, orchestration, or sandboxing — those are
+  litehive concerns.
+- **Main package:** `heru/` (at the repo root, below `.git/`). Public
+  API lives in `heru/__init__.py`, `heru/base.py`, `heru/types.py`,
+  and each `heru/adapters/<engine>.py`. Anything prefixed with `_` is
+  internal.
+- **Commands to know:**
+  - `uv sync --extra dev` — install heru's own venv
+  - `uv run pytest` — heru's standalone test suite
+  - `uv run heru <engine> <prompt>` — the CLI (WIP per task T-0002)
+  - `cd ~/git/litehive && uv run pytest -q tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py` — **litehive contract smoke tests; run before every commit**
+
+## Directory layout
+
+```
+heru/
+├── heru/                  # the Python package
+│   ├── __init__.py        # get_engine, ENGINE_CHOICES — PUBLIC
+│   ├── base.py            # ExternalCLIAdapter, CLIInvocation, run_live — PUBLIC
+│   ├── types.py           # shared pydantic types — PUBLIC
+│   ├── main.py            # `heru <engine> <prompt>` CLI entry — PUBLIC
+│   ├── _engine_detection.py   # internal
+│   ├── _continuation.py       # internal
+│   ├── adapters/
+│   │   ├── codex.py, _codex_impl.py         # CodexCLIAdapter PUBLIC, _impl internal
+│   │   ├── claude.py, _claude_impl.py
+│   │   ├── copilot.py, _copilot_impl.py
+│   │   ├── gemini.py, _gemini_impl.py
+│   │   ├── opencode.py, _opencode_impl.py
+│   │   ├── goz.py, _goz_impl.py
+│   │   └── common.py      # shared helpers
+│   └── quota/             # per-provider quota check helpers — PUBLIC
+├── tests/                 # heru's standalone unit tests (no litehive imports)
+├── pyproject.toml
+├── README.md
+└── .litehive/             # this workspace (tasks, state)
+```
+
+## Public API surface — do not break without a semver bump
+
+Anything **not** prefixed with `_` is public. Changing the signature,
+return type, or behavior of any of the following is a **semver-major**
+breaking change that requires a version bump in `pyproject.toml`, a
+CHANGELOG entry, and a migration note for litehive:
+
+- `heru.get_engine(name)`, `heru.ENGINE_CHOICES`
+- `heru.base.ExternalCLIAdapter` (subclass, don't modify shape)
+- `heru.base.CLIInvocation`, `heru.base.CLIExecutionResult`
+- Each adapter class: `CodexCLIAdapter`, `ClaudeCLIAdapter`,
+  `CopilotCLIAdapter`, `GeminiCLIAdapter`, `OpencodeCLIAdapter`,
+  `GozCLIAdapter`
+- Every pydantic model in `heru/types.py`
+- `heru.main.main` (the CLI entry)
+
+**Internal** (change freely, no semver implications): every
+`_`-prefixed module, every private method on public classes, and the
+exact text of rendered transcripts.
+
+## Hard rules — do NOT break these
+
+1. **No imports from `litehive`.** heru is a leaf package. One runtime
+   dep: `pydantic`. If your diff adds `from litehive …`, stop — the
+   code belongs in litehive, not heru.
+
+2. **Do not break litehive.** litehive depends on heru via an editable
+   path install, so every heru change propagates immediately. Before
+   you finish any stage that touched code, you MUST run:
+   ```
+   cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py \
+       tests/test_engine_variants_and_timeline.py \
+       tests/test_heru_cli.py tests/test_codex_quota.py -q
+   ```
+   If any fail, your change broke the contract. Either fix heru to
+   preserve the contract, or explicitly call out the breakage in your
+   stage report with a proposed litehive-side migration.
+
+3. **Stage reports are a litehive concept, not heru's.** `StageReport`,
+   `StageResultSubmission`, `StageResultTests`, and `TaskUpdateSubmission`
+   currently live in `heru/types.py` as a temporary compromise — they
+   are slated to move to litehive. Do not add new stage-report logic
+   or fields inside heru. If your task requires you to edit stage
+   report semantics, flag it back: it is misfiled and belongs in
+   litehive.
+
+4. **Tests must be standalone.** No test under `tests/` may import
+   from `litehive`. Every heru test must run in a fresh venv with
+   only `heru + pydantic + pytest` installed. For JSONL fixtures,
+   hand-craft strings or files under `tests/fixtures/` — do NOT
+   shell out to real engine CLIs during tests.
+
+5. **Respect the contract tests** (once `tests/contract/` exists per
+   T-0007). Changing an assertion in `tests/contract/` is by
+   definition a breaking change and requires the full semver
+   checklist.
+
+6. **Every new adapter needs both a public class AND a `_impl` helper
+   module.** Shape: `adapters/<engine>.py` for the public class,
+   `adapters/_<engine>_impl.py` for parsing/quota internals. Keep the
+   symmetry — the base class expects it.
+
+## Before you write code — ask yourself
+
+- **Is this a heru concern or a litehive concern?** If you need task
+  queues, retries, worktrees, commit pipelines, sandbox profiles, or
+  the `STAGE_RESULT:` agent protocol, this is probably litehive.
+  Stop and surface the concern in grooming.
+- **Does this change the public API?** If yes, note the intended
+  semver bump in your report and explicitly list what litehive needs
+  to update.
+- **Can I write this as a fixture-driven unit test?** If not, your
+  code is probably too coupled to the real CLI subprocess — refactor
+  to take parsed inputs.
+- **Have I run the litehive contract tests?** If not, the task is not
+  done, no matter what your implementation report says.
+
+## Relationship to litehive
+
+heru is maintained **alongside** litehive at `~/git/litehive`. They
+share a developer (you) and live on the same laptop. litehive depends
+on heru via `uv add --editable ~/git/heru`, so every heru save is
+immediately visible to litehive without any reinstall.
+
+**If a heru task requires changes in litehive to stay consistent**
+(e.g. adding a new adapter method that litehive needs to call), open
+a companion task in the litehive workspace referencing this task,
+and land the heru side FIRST. Litehive can then safely bump its own
+expectations.
+
+## Process overlay
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+## Project overlay
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+## Init scaffold
+- Scaffold `.litehive/context.md` from the generic base process template.
+- Layer the project profile summary, workspace overlay, and stage overlay onto that base.
+- Treat process profiles as overlays on the shared contract rather than separate workflows.
+- Keep the task/issue source of truth, verification commands, and recovery policy visible in the scaffold.
+- Seed Python workspaces with package layout, test entrypoints, and `uv` or virtualenv expectations.
+
+## Prompt scaffold
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+## Stage prompt scaffolding
+
+### grooming
+Act as the planner: clarify the user problem, inspect the repo if needed, and produce a concrete execution plan.
+Focus on scope clarification, acceptance criteria quality, decomposition, follow-up tasks, and PM sizing.
+Do not make code changes in this stage.
+
+### implementing
+Implement the task in this repository.
+Keep changes tightly scoped and complete the work needed for the acceptance criteria.
+Write tests so each assertion would fail if the feature is broken.
+Do not spend test coverage on framework behavior or library guarantees.
+Do not add tests that only restate defaults, constants, or static data.
+Keep each test focused on one behavior.
+Avoid duplicate coverage; extend an existing test only when it is the same behavior.
+- Write or update focused tests alongside the code change when feasible.
+- Use `pytest` for automated verification.
+- Use `tmp_path` or pytest fixtures instead of manual tempfiles in repo code or `/tmp` setup.
+- Mock external calls and integration edges, not the internal logic under test.
+- Do not use `time.sleep` in tests; use deterministic synchronization or time control.
+
+### testing
+Validate the implementation.
+Run focused checks or tests where possible and report failures precisely.
+Only make minimal fixes if absolutely necessary.
+Reject tests whose assertions would still pass if the feature were broken.
+Reject tests that duplicate existing coverage instead of covering a new behavior.
+Reject tests longer than 50 lines unless a shorter structure is genuinely impossible.
+Reject monolithic tests that exercise 5 or more behaviors in one flow.
+- Prefer targeted `pytest` invocations before broader test commands.
+- Verify new or updated tests use `pytest` idioms and fixtures.
+- Reject tests that use manual tempfiles where `tmp_path` would make isolation explicit.
+- Reject tests that mock the unit's internal logic instead of external boundaries.
+- Reject tests that rely on `time.sleep` instead of deterministic control.
+
+### accepting
+Act as the reviewer: validate the end-user outcome against the acceptance criteria and decide whether it should be accepted or sent back.
+Be strict about regression detection, evidence quality, and final done versus not-done judgment.
+
+## Python specifics
+- Prefer `pytest` for automated verification.
+- Keep module boundaries and import hygiene clear.
+- Record virtualenv, `uv`, or toolchain expectations when they matter.
+
+## Development rules
+- Keep changes scoped to the current task.
+- Prefer targeted tests over broad test suites.
+- Record assumptions clearly in the final report.
+
+## Tool usage
+- Use `uv run pytest -q` for the current smoke test suite.
+- Update litehive task artifacts instead of inventing external state stores.
+- If you add a new command or workflow, document it here for future runs.
+
+Shared process:
+- Orchestrator model: the local runner is the manager and owns stage routing.
+- Routing model: routing stays deterministic and local; subagents execute assigned stages but do not self-route.
+- Shared stages: grooming -> implementing -> testing -> accepting -> commit_to_git.
+- Role model: `planner` frames the task, `reviewer` performs final PM-style acceptance, `swe` edits code, and `qa` runs focused verification.
+- Source of truth: tasks and implementation state live under `.litehive/`.
+- Task source of truth: issues or task records define scope; prompts and transcripts are supporting evidence.
+- TDD expectations: add or update focused tests near the changed Python module before broad suites.
+- Verification discipline: prefer targeted `pytest` evidence close to the changed module before broader smoke coverage.
+- Acceptance flow: verify behavior with targeted `pytest` coverage and note any residual risk.
+- Commit and recovery: keep checkpoint commits deterministic and easy to recover.
+
+Project overlay:
+- Python package or application workflow with pytest-oriented verification.
+- Favor incremental, reviewable changes over broad refactors.
+- Keep implementation, verification, and acceptance evidence explicit.
+- Prefer focused `pytest` coverage for the changed modules.
+- Keep dependency and packaging changes explicit and minimal.
+
+Prompt scaffold:
+- Start from the shared process contract, then add repository context and task data.
+- Combine the generic base prompt with the selected project overlay instead of replacing the base.
+- Apply stage defaults first, then append any project-specific stage overlay for that step.
+- Keep stage prompts explicit about role, verification expectations, and final report format.
+
+Role focus:
+- You are the SWE responsible for completing the implementation within scope.
+- Start from the task record, latest report, and latest rejection or recovery artifact before broad repository exploration.
+- Treat the task goal, acceptance criteria, and plan as the execution contract; if they are missing or contradictory, route the issue back through grooming or recovery instead of guessing.
+- Before assuming the work is already implemented, run `git diff main...HEAD` in your worktree.
+- If there are no changes, implement from scratch regardless of what prior stage reports claim.
+- Only skip implementation and submit `litehive report --verdict pass` if `git diff main...HEAD` shows the expected changes and the acceptance criteria are met.
+- Never exit the stage without calling `litehive report`.
+- If the task needs scope correction rather than code changes, use `litehive task update` to narrow scope or adjust the acceptance criteria so the task re-enters the pipeline with the corrected contract.
+- If the task is genuinely obsolete or duplicated, use `litehive task close --outcome wont_do` or `litehive task close --outcome duplicate` with a concrete reason instead of exiting silently.
+
+Stage instructions:
+Implement the task in this repository.
+Keep changes tightly scoped and complete the work needed for the acceptance criteria.
+Write tests so each assertion would fail if the feature is broken.
+Do not spend test coverage on framework behavior or library guarantees.
+Do not add tests that only restate defaults, constants, or static data.
+Keep each test focused on one behavior.
+Avoid duplicate coverage; extend an existing test only when it is the same behavior.
+- Write or update focused tests alongside the code change when feasible.
+- Use `pytest` for automated verification.
+- Use `tmp_path` or pytest fixtures instead of manual tempfiles in repo code or `/tmp` setup.
+- Mock external calls and integration edges, not the internal logic under test.
+- Do not use `time.sleep` in tests; use deterministic synchronization or time control.
+
+Goal:
+heru's quota/usage output is per-provider and inconsistent, and the duration-based labels (5h, 7d, monthly) are meaningless to consumers — what matters is whether a limit is short-term (imminent, session-scoped) or long-term (the one used for blocking decisions at high utilization). Reshape heru's quota API so every provider returns the same unified shape: exactly two windows distinguishing short-term from long-term utilization. Each window reports percent remaining and a reset timestamp normalized to ISO8601 UTC. Collapse all per-provider dataclasses (CodexQuotaStatus, CodexQuotaWindow, ClaudeQuotaStatus, ClaudeQuotaWindow, CopilotQuotaStatus, ZaiQuotaStatus, ZaiQuotaWindow and friends) into one shared data model — no more one-off fields like primary_window, secondary_window, five_hour, seven_day, api_calls, tokens, window_hours, premium_remaining, premium_entitlement, quota_reset_date, max_used_percent.
+
+Per-provider mapping constraints:
+- codex: short-term window is hardcoded to 100% remaining (treated as non-binding). Long-term window reads from the codex API's weekly signal.
+- claude: short-term window maps to the 5-hour signal; long-term window maps to the 7-day signal.
+- copilot: upstream only exposes a single monthly window. Map that monthly signal into the long-term window (long-term is the broader 'longest usage-bearing window we know about'). Short-term is hardcoded to 100% remaining.
+- zai: short-term maps to the tokens signal only — drop the api_calls / TIME_LIMIT window entirely, it is not useful to consumers. Long-term is hardcoded to 100% remaining.
+- gemini: no usage endpoint exists; 'heru usage gemini' continues to report 'unsupported'.
+
+'heru usage' and 'heru usage <name>' CLI output follows the new shape, including the --json form.
+
+This is a breaking change to heru's public quota API, and litehive is the main consumer. To keep the two repos in sync, this task must also update litehive's call sites atomically: delete references to the removed per-provider fields, migrate every consumer (engine monitoring, health, dashboard, dry-run, web snapshot, pool control, pipeline models, tests) to the new unified (short-term, long-term) shape, and bump the heru dependency pin in litehive's pyproject.toml. litehive's blocking logic at high utilization should read from the long-term window. Run heru's tests/ suite, heru's tests_integration/ suite across every supported engine, litehive's full tests/ suite, litehive's tests_integration/ suite across every supported engine, and litehive's contract test suite run from ~/git/litehive before finishing. Both repos should land in a coordinated way so litehive is never broken against heru.
+
+Acceptance criteria:
+- heru exposes a single unified usage status dataclass with exactly two windows distinguishing short-term and long-term utilization
+- Each window carries percent remaining and reset_at (ISO8601 UTC string or None)
+- All per-provider quota/window dataclasses are removed from heru/quota/
+- codex short-term window is 100% remaining regardless of API response
+- zai long-term window is 100% remaining regardless of API response
+- zai exposes only the tokens signal; the api_calls / TIME_LIMIT window is gone
+- copilot's monthly upstream signal maps into the long-term window; short-term is 100% remaining
+- claude maps 5-hour → short-term and 7-day → long-term
+- gemini continues to report 'unsupported' in 'heru usage'
+- All reset timestamps across providers are ISO8601 UTC (or None when unknown/unsupported)
+- 'heru usage' and 'heru usage <name>' print the unified shape; --json emits the unified schema
+- heru tests/ updated and passing, fixture-only, no network
+- heru tests_integration/ passes for every supported engine (codex, claude, copilot, gemini, opencode, goz) when the engine is available
+- heru README documents the unified usage shape
+- litehive has zero references to primary_window, secondary_window, five_hour, seven_day, api_calls, tokens, window_hours, premium_remaining, premium_entitlement, quota_reset_date, or max_used_percent
+- litehive's blocking logic at high utilization reads from the long-term window
+- heru dependency pin in litehive's pyproject.toml bumped to include the unified shape
+- litehive tests/ passes end-to-end
+- litehive tests_integration/ passes for every supported engine (codex, claude, copilot, gemini, opencode, goz) when the engine is available
+- litehive's contract test suite run from ~/git/litehive still passes
+
+Task template:
+- Use the `refactor` template to keep the task structured.
+- Name the seam being refactored and the behavior that must not change.
+- Keep the scope structural unless the task explicitly includes functional change.
+- Use focused verification to prove behavior stayed stable.
+
+Template sections to fill or verify:
+- Refactor seam: identify the module, function, or flow being reshaped.
+- Behavior to preserve: list the user-visible or contract-level behavior that must stay the same.
+- Verification: capture the checks that confirm the refactor did not regress behavior.
+
+Plan:
+- Identify the narrow seam to refactor and the behavior that must stay stable.
+- Restructure the code in small, reviewable steps.
+- Run focused verification to confirm behavior is preserved.
+
+PM sizing:
+- Current PM complexity: complex
+- Current planned effort: l
+
+Constraints:
+- Avoid broad opportunistic cleanup outside the chosen seam.
+- Preserve existing behavior unless the task explicitly includes functional changes.
+
+
+Discussion thread:
+
+--- [2026-04-11T07:31:39+00:00] planner (grooming) — pass ---
+PASS after repo inspection only; no code changes and no tests run in grooming.
+
+Verified by inspection:
+- heru quota public surface is currently provider-specific in `heru/quota/{codex,claude,copilot,zai}_quota.py`, re-exported through `heru/quota/__init__.py`, and rendered in provider-specific form by `heru/main.py`.
+- litehive consumes those provider-specific shapes through compatibility shims in `litehive/agents/quota/` and direct field access in at least `litehive/pipeline/_models.py`, `litehive/observability/_engine_monitoring.py`, `litehive/web/snapshot.py`, plus tests covering dashboard/status/monitoring paths.
+- `gemini` remains unsupported in `heru usage` today and should stay that way.
+- Acceptance criterion wording about "bump the heru dependency pin in litehive's pyproject.toml" is slightly mismatched to reality: litehive currently depends on heru via editable path in `[tool.uv.sources]` with no version range. The implementation should still bump heru's package version for the breaking API change and refresh litehive lock metadata; there is no literal version pin to edit in litehive `pyproject.toml` unless the dependency strategy is intentionally changed.
+
+Refactor seam:
+- heru: `heru/quota/*`, `heru/quota/__init__.py`, `heru/main.py`, README, quota tests, usage CLI tests, integration usage tests.
+- litehive: quota compatibility shims under `litehive/agents/quota/`, engine blocking logic in `litehive/pipeline/_models.py`, engine monitoring in `litehive/observability/_engine_monitoring.py`, web/dashboard serialization in `litehive/web/snapshot.py`, and all tests/docs asserting provider-specific quota fields.
+
+Behavior to preserve:
+- proactive quota checks stay fail-open on missing auth / fetch errors
+- `heru usage gemini` still reports `unsupported`
+- engine runtime usage extraction for execution transcripts is unchanged; this task is about quota/usage status APIs and CLI output, not per-run token accounting models in `heru.types.EngineUsageWindow`
+- litehive engine selection still blocks/freeze-skips engines on high utilization, but the decision source becomes the unified `long_term` window
+
+Implementation plan for next stage:
+1. Introduce one shared heru quota model, exported from `heru.quota`, with exactly two windows: `short_term` and `long_term`. Each window should expose `percent_remaining` and `reset_at`; status should carry shared fields only (`limit_reached`, `checked_at`, `error`, and any truly common helper properties).
+2. Rewrite each provider parser/fetcher to populate that shared model:
+   - codex: `short_term.percent_remaining = 100.0`, `long_term` from weekly signal, UTC-normalized reset
+   - claude: `short_term` from 5h, `long_term` from 7d
+   - copilot: `short_term.percent_remaining = 100.0`, `long_term` from monthly signal, reset normalized to UTC ISO8601
+   - zai: `short_term` from tokens only, drop TIME_LIMIT/api_calls entirely, `long_term.percent_remaining = 100.0`
+   - gemini: no quota model, CLI remains unsupported
+3. Update heru blocking helpers and CLI rendering to consume only the unified shape. Human output and `--json` should both expose `short_term` and `long_term` windows directly; remove provider-specific `details.windows` naming and legacy fields.
+4. Remove or replace provider-specific quota/window dataclasses and update re-exports/shims so litehive imports the new shared model rather than old per-provider classes.
+5. Migrate litehive atomically:
+   - switch blocking logic to read `long_term`
+   - update engine monitoring metadata/summary generation to store normalized window data instead of `primary_*` / `secondary_*`
+   - update dashboard/web snapshot serialization to render the new two-window shape
+   - remove all references to `primary_window`, `secondary_window`, `five_hour`, `seven_day`, `api_calls`, `tokens`, `window_hours`, `premium_remaining`, `premium_entitlement`, `quota_reset_date`, `max_used_percent`
+6. Update README/docs and add focused tests first near changed modules, then run full required suites.
+
+Verification required in implementation/testing stages:
+- heru focused tests around quota parsers and `tests/test_heru_cli.py`
+- `uv run pytest` in heru
+- heru integration suite across available engines under `tests_integration/`
+- litehive focused tests for pipeline blocking, monitoring, snapshot/dashboard, and CLI/status output
+- litehive full `tests/`
+- litehive `tests_integration/` across available engines
+- litehive contract smoke from `~/git/litehive`: `uv run pytest tests/test_runner_workflow.py tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py tests/test_codex_quota.py -q`
+
+Risks to watch:
+- `litehive/observability/_engine_monitoring.py` currently has duplicated `record_codex_quota_check`; cleanly update both occurrences or collapse duplication as part of this task only if it stays reviewable.
+- reset timestamps are inconsistent today (`quota_reset_date` date-only for copilot, provider-native strings elsewhere); add one normalization helper and use it everywhere.
+- because litehive uses `from heru.quota import *`, removing names will break imports immediately; land heru shared exports and litehive consumer migration together in one implementation pass.
+
+TASK_UPDATE:
+  refactor_seam: "heru quota/usage status API and litehive quota consumers"
+  behavior_to_preserve:
+    - "Quota checks fail open on auth/fetch errors"
+    - "Gemini remains unsupported in `heru usage`"
+    - "Execution transcript token accounting models stay unchanged"
+    - "Litehive blocks on high utilization, now sourced from unified `long_term`"
+  acceptance_criteria:
+    - "heru exports one shared quota status model with exactly `short_term` and `long_term` windows"
+    - "Each window exposes `percent_remaining` and `reset_at` only, with reset timestamps normalized to ISO8601 UTC or `None`"
+    - "Provider-specific quota/window dataclasses and provider-specific usage CLI fields are removed"
+    - "`heru usage` human and `--json` output emit the unified two-window shape"
+    - "litehive has zero runtime or test references to removed provider-specific quota fields"
+    - "litehive high-utilization blocking reads from `long_term`"
+    - "heru package version is bumped for the breaking public API change, and litehive dependency metadata/lockfile is refreshed to match the editable-path setup"
+    - "Required heru, litehive, integration, and contract suites pass"
+  constraints:
+    - "Keep runtime usage extraction types in `heru.types` out of scope unless a test proves they must change"
+    - "Do not broaden into unrelated dashboard or monitoring cleanup beyond the quota-model migration"
+  plan:
+    - "Add shared quota model and normalization helper in heru"
+    - "Map all providers into `short_term`/`long_term`"
+    - "Swap heru CLI/readme/tests to unified output"
+    - "Migrate litehive quota shims and consumer logic atomically"
+    - "Run focused tests, then full repo and integration suites"
+  pm_complexity: complex
+  planned_effort: xl
+
+IMPORTANT: When you are done, you MUST submit your verdict by running:
+  litehive report --verdict <pass|reject> --role swe --step implementing --message "<your report>"
+The environment variable LITEHIVE_TASK_ID is set to T-0014 for this session. Workspace and task resolution should use the injected environment automatically.
+
+Your --message is the PRIMARY way the next agent understands what happened.
+Do NOT rely on your raw transcript being read — write the report as if it is the only thing the next agent will see.
+
+Report requirements:
+- On PASS/ACCEPT: explain what you verified, what tests you ran, what evidence confirms the acceptance criteria are met.
+- On REJECT: you MUST include ALL of the following:
+  1. EXPECTED behavior: what should happen according to the acceptance criteria
+  2. OBSERVED behavior: what actually happens (exact error messages, test output, wrong values)
+  3. Steps to reproduce: the exact command or test that demonstrates the gap
+  4. Which acceptance criteria are not met and which ones are already satisfied
+
+A vague rejection like 'tests fail' or 'missing evidence' is useless and causes infinite loops.
+A good rejection looks like: 'Expected: `litehive engine gemini` switches the default engine and prints confirmation. Observed: command exits 0 but config.yaml still shows the old engine. Reproduce: run `litehive engine gemini` then `cat .litehive/config.yaml`. Criteria 1-3 are met, criterion 4 (persistence) is not.'

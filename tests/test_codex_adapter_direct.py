@@ -101,6 +101,7 @@ def test_codex_build_invocation_continue_latest_shape(tmp_path: Path) -> None:
         "--json",
         "--dangerously-bypass-approvals-and-sandbox",
         "--skip-git-repo-check",
+        "--last",
         "ship it",
     ]
 

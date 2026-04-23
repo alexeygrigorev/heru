@@ -1,0 +1,81 @@
+id: T-0014
+slug: normalize-heru-usage-to-short-long-term-windows
+title: Normalize heru usage to short/long-term windows and migrate litehive consumers
+  atomically
+created_at: '2026-04-11T07:03:30+00:00'
+task_type: refactor
+pipeline_mode: full
+priority: high
+depends_on: []
+goal: "heru's quota/usage output is per-provider and inconsistent, and the duration-based\
+  \ labels (5h, 7d, monthly) are meaningless to consumers \u2014 what matters is whether\
+  \ a limit is short-term (imminent, session-scoped) or long-term (the one used for\
+  \ blocking decisions at high utilization). Reshape heru's quota API so every provider\
+  \ returns the same unified shape: exactly two windows distinguishing short-term\
+  \ from long-term utilization. Each window reports percent remaining and a reset\
+  \ timestamp normalized to ISO8601 UTC. Collapse all per-provider dataclasses (CodexQuotaStatus,\
+  \ CodexQuotaWindow, ClaudeQuotaStatus, ClaudeQuotaWindow, CopilotQuotaStatus, ZaiQuotaStatus,\
+  \ ZaiQuotaWindow and friends) into one shared data model \u2014 no more one-off\
+  \ fields like primary_window, secondary_window, five_hour, seven_day, api_calls,\
+  \ tokens, window_hours, premium_remaining, premium_entitlement, quota_reset_date,\
+  \ max_used_percent.\n\nPer-provider mapping constraints:\n- codex: short-term window\
+  \ is hardcoded to 100% remaining (treated as non-binding). Long-term window reads\
+  \ from the codex API's weekly signal.\n- claude: short-term window maps to the 5-hour\
+  \ signal; long-term window maps to the 7-day signal.\n- copilot: upstream only exposes\
+  \ a single monthly window. Map that monthly signal into the long-term window (long-term\
+  \ is the broader 'longest usage-bearing window we know about'). Short-term is hardcoded\
+  \ to 100% remaining.\n- zai: short-term maps to the tokens signal only \u2014 drop\
+  \ the api_calls / TIME_LIMIT window entirely, it is not useful to consumers. Long-term\
+  \ is hardcoded to 100% remaining.\n- gemini: no usage endpoint exists; 'heru usage\
+  \ gemini' continues to report 'unsupported'.\n\n'heru usage' and 'heru usage <name>'\
+  \ CLI output follows the new shape, including the --json form.\n\nThis is a breaking\
+  \ change to heru's public quota API, and litehive is the main consumer. To keep\
+  \ the two repos in sync, this task must also update litehive's call sites atomically:\
+  \ delete references to the removed per-provider fields, migrate every consumer (engine\
+  \ monitoring, health, dashboard, dry-run, web snapshot, pool control, pipeline models,\
+  \ tests) to the new unified (short-term, long-term) shape, and bump the heru dependency\
+  \ pin in litehive's pyproject.toml. litehive's blocking logic at high utilization\
+  \ should read from the long-term window. Run heru's tests/ suite, heru's tests_integration/\
+  \ suite across every supported engine, litehive's full tests/ suite, litehive's\
+  \ tests_integration/ suite across every supported engine, and litehive's contract\
+  \ test suite run from ~/git/litehive before finishing. Both repos should land in\
+  \ a coordinated way so litehive is never broken against heru."
+acceptance_criteria:
+- heru exposes a single unified usage status dataclass with exactly two windows distinguishing
+  short-term and long-term utilization
+- Each window carries percent remaining and reset_at (ISO8601 UTC string or None)
+- All per-provider quota/window dataclasses are removed from heru/quota/
+- codex short-term window is 100% remaining regardless of API response
+- zai long-term window is 100% remaining regardless of API response
+- zai exposes only the tokens signal; the api_calls / TIME_LIMIT window is gone
+- copilot's monthly upstream signal maps into the long-term window; short-term is
+  100% remaining
+- "claude maps 5-hour \u2192 short-term and 7-day \u2192 long-term"
+- gemini continues to report 'unsupported' in 'heru usage'
+- All reset timestamps across providers are ISO8601 UTC (or None when unknown/unsupported)
+- '''heru usage'' and ''heru usage <name>'' print the unified shape; --json emits
+  the unified schema'
+- heru tests/ updated and passing, fixture-only, no network
+- heru tests_integration/ passes for every supported engine (codex, claude, copilot,
+  gemini, opencode, goz) when the engine is available
+- heru README documents the unified usage shape
+- litehive has zero references to primary_window, secondary_window, five_hour, seven_day,
+  api_calls, tokens, window_hours, premium_remaining, premium_entitlement, quota_reset_date,
+  or max_used_percent
+- litehive's blocking logic at high utilization reads from the long-term window
+- heru dependency pin in litehive's pyproject.toml bumped to include the unified shape
+- litehive tests/ passes end-to-end
+- litehive tests_integration/ passes for every supported engine (codex, claude, copilot,
+  gemini, opencode, goz) when the engine is available
+- litehive's contract test suite run from ~/git/litehive still passes
+constraints:
+- Avoid broad opportunistic cleanup outside the chosen seam.
+- Preserve existing behavior unless the task explicitly includes functional changes.
+plan:
+- Identify the narrow seam to refactor and the behavior that must stay stable.
+- Restructure the code in small, reviewable steps.
+- Run focused verification to confirm behavior is preserved.
+git:
+  auto_commit: true
+  commit_message: 'litehive: complete T-0014 normalize-heru-usage-to-short-long-term-windows'
+created_from: null

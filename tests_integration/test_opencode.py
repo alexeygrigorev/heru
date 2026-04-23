@@ -1,7 +1,7 @@
 import pytest
 
 from tests_integration.helpers import (
-    assert_continue_latest_smoke,
+    assert_resume_by_id_smoke,
     prepare_smoke_session,
     smoke_token,
 )
@@ -19,5 +19,5 @@ def test_opencode_smoke_prompt_succeeds(opencode_smoke_session) -> None:
     assert smoke_token("opencode") in opencode_smoke_session.engine.render_transcript(opencode_smoke_session.execution)
 
 
-def test_opencode_continue_latest_succeeds(integration_root) -> None:
-    assert_continue_latest_smoke("opencode", cwd=integration_root)
+def test_opencode_resume_by_id_succeeds(opencode_smoke_session) -> None:
+    assert_resume_by_id_smoke(opencode_smoke_session)

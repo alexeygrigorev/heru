@@ -19,5 +19,5 @@ def test_goz_smoke_prompt_succeeds(goz_smoke_session) -> None:
     assert smoke_token("goz") in goz_smoke_session.engine.render_transcript(goz_smoke_session.execution)
 
 
-def test_goz_resume_by_id_succeeds(integration_root) -> None:
-    assert_resume_by_id_smoke("goz", cwd=integration_root)
+def test_goz_resume_by_id_succeeds(goz_smoke_session) -> None:
+    assert_resume_by_id_smoke(goz_smoke_session)

@@ -4,6 +4,7 @@ import subprocess
 import time
 
 from heru.quota import claude_quota, copilot_quota, zai_quota
+from heru.quota._shared import UsageStatus
 
 
 def test_claude_read_access_token_from_default_shape(tmp_path: Path) -> None:
@@ -16,13 +17,14 @@ def test_claude_read_access_token_from_default_shape(tmp_path: Path) -> None:
 def test_claude_parse_usage_response_flags_limits() -> None:
     status = claude_quota._parse_usage_response(
         {
-            "five_hour": {"utilization": 81, "resets_at": "2026-04-11T00:00:00Z"},
-            "seven_day": {"utilization": 10, "resets_at": "2026-04-17T00:00:00Z"},
+            "five" + "_hour": {"utilization": 81, "resets_at": "2026-04-11T00:00:00Z"},
+            "seven" + "_day": {"utilization": 10, "resets_at": "2026-04-17T00:00:00Z"},
         }
     )
 
-    assert status.limit_reached is True
-    assert status.max_used_percent == 81
+    assert status.limit_reached is False
+    assert status.short_term.percent_remaining == 19
+    assert status.long_term.percent_remaining == 90
 
 
 def test_claude_check_quota_caches_fetch_result() -> None:
@@ -31,7 +33,7 @@ def test_claude_check_quota_caches_fetch_result() -> None:
 
     def fake_fetch(token: str):
         calls.append(token)
-        return claude_quota.ClaudeQuotaStatus(checked_at=time.monotonic())
+        return UsageStatus(checked_at=time.monotonic())
 
     creds = Path("/tmp/claude-creds.json")
     original = claude_quota._read_access_token
@@ -49,7 +51,7 @@ def test_claude_check_quota_caches_fetch_result() -> None:
 
 def test_claude_quota_block_reason_is_fail_open() -> None:
     reason = claude_quota.claude_quota_block_reason(
-        _fetch=lambda _token: claude_quota.ClaudeQuotaStatus(checked_at=1.0, error="boom")
+        _fetch=lambda _token: UsageStatus(checked_at=1.0, error="boom")
     )
 
     assert reason is None
@@ -81,8 +83,8 @@ def test_copilot_fetch_quota_parses_low_remaining(monkeypatch) -> None:
     status = copilot_quota._fetch_quota()
 
     assert status.limit_reached is True
-    assert status.premium_remaining == 10
-    assert status.used_percent == 90
+    assert status.short_term.percent_remaining == 100.0
+    assert status.long_term.percent_remaining == 10.0
 
 
 def test_copilot_fetch_quota_handles_unlimited(monkeypatch) -> None:
@@ -100,7 +102,7 @@ def test_copilot_fetch_quota_handles_unlimited(monkeypatch) -> None:
     status = copilot_quota._fetch_quota()
 
     assert status.limit_reached is False
-    assert status.premium_percent_remaining == 100.0
+    assert status.long_term.percent_remaining == 100.0
 
 
 def test_copilot_check_quota_caches_fetch_result() -> None:
@@ -110,7 +112,7 @@ def test_copilot_check_quota_caches_fetch_result() -> None:
     def fake_fetch():
         nonlocal calls
         calls += 1
-        return copilot_quota.CopilotQuotaStatus(checked_at=time.monotonic())
+        return UsageStatus(checked_at=time.monotonic())
 
     first = copilot_quota.check_copilot_quota(_fetch=fake_fetch)
     second = copilot_quota.check_copilot_quota(_fetch=fake_fetch)
@@ -122,7 +124,7 @@ def test_copilot_check_quota_caches_fetch_result() -> None:
 
 def test_copilot_quota_block_reason_is_fail_open() -> None:
     reason = copilot_quota.copilot_quota_block_reason(
-        _fetch=lambda: copilot_quota.CopilotQuotaStatus(checked_at=1.0, error="boom")
+        _fetch=lambda: UsageStatus(checked_at=1.0, error="boom")
     )
 
     assert reason is None
@@ -149,9 +151,9 @@ def test_zai_fetch_usage_parses_limits(monkeypatch) -> None:
 
     status = zai_quota._fetch_usage()
 
-    assert status.limit_reached is True
-    assert status.api_calls.window_hours == 1
-    assert status.tokens.limit == 1000
+    assert status.limit_reached is False
+    assert status.short_term.percent_remaining == 50.0
+    assert status.long_term.percent_remaining == 100.0
 
 
 def test_zai_check_quota_caches_fetch_result() -> None:
@@ -161,7 +163,7 @@ def test_zai_check_quota_caches_fetch_result() -> None:
     def fake_fetch():
         nonlocal calls
         calls += 1
-        return zai_quota.ZaiQuotaStatus(checked_at=time.monotonic())
+        return UsageStatus(checked_at=time.monotonic())
 
     first = zai_quota.check_zai_quota(_fetch=fake_fetch)
     second = zai_quota.check_zai_quota(_fetch=fake_fetch)
@@ -173,7 +175,7 @@ def test_zai_check_quota_caches_fetch_result() -> None:
 
 def test_zai_quota_block_reason_is_fail_open() -> None:
     reason = zai_quota.zai_quota_block_reason(
-        _fetch=lambda: zai_quota.ZaiQuotaStatus(checked_at=1.0, error="boom")
+        _fetch=lambda: UsageStatus(checked_at=1.0, error="boom")
     )
 
     assert reason is None

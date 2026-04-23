@@ -1,14 +1,16 @@
 """Proactive Claude quota checking via OAuth usage endpoint."""
 
+from dataclasses import dataclass, field
 import json
 import logging
 import os
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 
-import urllib.request
 import urllib.error
+import urllib.request
+
+from heru.quota._shared import UsageWindow, normalize_reset_at
 
 logger = logging.getLogger(__name__)
 
@@ -16,36 +18,46 @@ _USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 _CACHE_TTL_SECONDS = 60
 
 
+@dataclass(slots=True)
+class ClaudeQuotaWindow:
+    used_percent: float = 0.0
+    reset_at: str | None = None
+
+    def __post_init__(self) -> None:
+        self.used_percent = float(self.used_percent)
+        self.reset_at = normalize_reset_at(self.reset_at)
+
+    @property
+    def percent_remaining(self) -> float:
+        return max(0.0, 100.0 - self.used_percent)
+
+
+@dataclass(slots=True)
+class ClaudeQuotaStatus:
+    five_hour: ClaudeQuotaWindow = field(default_factory=ClaudeQuotaWindow)
+    seven_day: ClaudeQuotaWindow = field(default_factory=ClaudeQuotaWindow)
+    limit_reached: bool = False
+    checked_at: float = 0.0
+    error: str | None = None
+    subscription: str | None = None
+
+    @property
+    def short_term(self) -> UsageWindow:
+        return UsageWindow(percent_remaining=self.five_hour.percent_remaining, reset_at=self.five_hour.reset_at)
+
+    @property
+    def long_term(self) -> UsageWindow:
+        return UsageWindow(percent_remaining=self.seven_day.percent_remaining, reset_at=self.seven_day.reset_at)
+
+
 def _default_credentials_path() -> Path:
     """Resolve Claude credentials path, respecting config dir overrides."""
-    # Claude Code may use a custom config dir
     config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
     if config_dir:
         return Path(config_dir) / ".credentials.json"
     return Path.home() / ".claude" / ".credentials.json"
 
 
-@dataclass(slots=True)
-class ClaudeQuotaWindow:
-    used_percent: float = 0.0
-    reset_at: str | None = None
-
-
-@dataclass(slots=True)
-class ClaudeQuotaStatus:
-    limit_reached: bool = False
-    five_hour: ClaudeQuotaWindow = field(default_factory=ClaudeQuotaWindow)
-    seven_day: ClaudeQuotaWindow = field(default_factory=ClaudeQuotaWindow)
-    checked_at: float = 0.0
-    error: str | None = None
-    subscription: str | None = None
-
-    @property
-    def max_used_percent(self) -> float:
-        return max(self.five_hour.used_percent, self.seven_day.used_percent)
-
-
-# Module-level cache
 _cached_status: ClaudeQuotaStatus | None = None
 
 
@@ -68,25 +80,29 @@ def _read_access_token(creds_path: Path | None = None) -> str | None:
 
 
 def _parse_usage_response(data: dict) -> ClaudeQuotaStatus:
-    five_hour_data = data.get("five_hour") or {}
-    seven_day_data = data.get("seven_day") or {}
+    five_hour_data = data.get("five_hour")
+    if not isinstance(five_hour_data, dict):
+        five_hour_data = {}
+    seven_day_data = data.get("seven_day")
+    if not isinstance(seven_day_data, dict):
+        seven_day_data = {}
 
     five_hour = ClaudeQuotaWindow(
-        used_percent=float(five_hour_data.get("utilization", 0)),
+        used_percent=five_hour_data.get("utilization", 0),
         reset_at=five_hour_data.get("resets_at"),
     )
     seven_day = ClaudeQuotaWindow(
-        used_percent=float(seven_day_data.get("utilization", 0)),
+        used_percent=seven_day_data.get("utilization", 0),
         reset_at=seven_day_data.get("resets_at"),
     )
-
-    limit_reached = five_hour.used_percent >= 80 or seven_day.used_percent >= 95
+    subscription = data.get("subscription")
 
     return ClaudeQuotaStatus(
-        limit_reached=limit_reached,
         five_hour=five_hour,
         seven_day=seven_day,
+        limit_reached=seven_day.percent_remaining <= 5.0,
         checked_at=time.monotonic(),
+        subscription=subscription if isinstance(subscription, str) and subscription else None,
     )
 
 
@@ -126,7 +142,7 @@ def check_claude_quota(
     if token is None:
         return ClaudeQuotaStatus(checked_at=time.monotonic(), error="no-credentials")
 
-    fetcher = _fetch or _fetch_usage
+    fetcher = _fetch if callable(_fetch) else _fetch_usage
     _cached_status = fetcher(token)
     return _cached_status
 
@@ -142,10 +158,10 @@ def claude_quota_block_reason(
     if status.error:
         return None  # fail-open
     if status.limit_reached:
-        window = "5h" if status.five_hour.used_percent >= 80 else "7d"
-        pct = status.five_hour.used_percent if window == "5h" else status.seven_day.used_percent
-        reset = status.five_hour.reset_at if window == "5h" else status.seven_day.reset_at
-        return f"claude usage limit reached ({window} window at {pct:.0f}%, resets {reset})"
+        return (
+            f"claude usage limit reached "
+            f"(long-term window at {status.long_term.used_percent:.0f}%, resets {status.long_term.reset_at})"
+        )
     return None
 
 

@@ -1,20 +1,11 @@
 id: T-0010
 slug: add-tests-integration-real-engine-cli-smoke-tests
 title: "Add tests_integration/ \u2014 real-engine CLI smoke tests for all heru adapters"
-depends_on: []
-task_type: adapter
-model: null
-mode: tasks
-pipeline_mode: full
-status: done
-flag_reason: null
-flag_count: 0
-pipeline_status: done
-priority: medium
-pm_complexity: moderate
-planned_effort: m
 created_at: '2026-04-10T20:46:41+00:00'
-updated_at: '2026-04-10T20:57:09+00:00'
+task_type: adapter
+pipeline_mode: full
+priority: medium
+depends_on: []
 goal: "Create tests_integration/ at the repo root with one smoke-test file per engine\
   \ adapter (codex, claude, copilot, gemini, opencode, goz). Each test spawns the\
   \ REAL engine CLI as a subprocess via heru's own adapter (build_invocation + finalize_invocation\
@@ -56,48 +47,7 @@ plan:
 - Inspect the existing adapter interface, config wiring, and invocation flow.
 - Implement the adapter change close to the integration seam.
 - Verify the adapter path with a focused test or representative run.
-human_checkpoints: []
-subagents:
-- id: SA-0001
-  role: planner
-  engine: codex
-  status: completed
-  path: subagents/SA-0001-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0002
-  role: swe
-  engine: codex
-  status: completed
-  path: subagents/SA-0002-swe
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0003
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0003-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0004
-  role: reviewer
-  engine: codex
-  status: completed
-  path: subagents/SA-0004-reviewer
-  sandboxed: false
-  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0010 add-tests-integration-real-engine-cli-smoke-tests'
-  commit_sha: d2eba402efc0f2781ff5add0774521913058d3c0
-  checkpoint_base_sha: df7851597ece2c365005f6e58cfdedb53194caa0
-  checkpoint_attempts: 1
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 0
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null

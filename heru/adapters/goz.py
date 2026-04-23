@@ -15,9 +15,7 @@ from heru.adapters._goz_impl import (
     goz_stream_event_adapter,
     goz_usage_window,
 )
-from heru.adapters.common import classify_execution_limit
-from heru.base import CLIExecutionResult, ExternalCLIAdapter, iter_jsonl_payloads
-from heru.types import RuntimeEngineContinuation, UnifiedEvent
+from heru.base import ExternalCLIAdapter
 
 _goz_extract_text = goz_extract_text
 
@@ -32,6 +30,8 @@ class GozCLIAdapter(ExternalCLIAdapter):
         strips_environment=False,
         transcript_format="jsonl",
     )
+    USAGE_PROVIDER = "z.ai"
+    REQUIRE_USAGE_PAYLOADS = True
 
     def build_command(
         self,
@@ -52,50 +52,24 @@ class GozCLIAdapter(ExternalCLIAdapter):
         command.append(prompt)
         return command
 
-    def render_transcript(self, execution: CLIExecutionResult) -> str:
-        return self.render_transcript_from_parts(
-            execution,
-            assistant_text=extract_goz_transcript(execution.stdout),
-            error_text="\n".join(extract_goz_errors(execution.stdout)).strip(),
-        )
+    def transcript_assistant_text(self, execution) -> str:
+        return extract_goz_transcript(execution.stdout)
 
-    def extract_usage_observation(self, execution: CLIExecutionResult):
-        payloads = iter_jsonl_payloads(execution.stdout)
-        metadata: dict[str, str | int | bool | None] = {}
-        usage = None
-        limit_reason = None
-        for payload in reversed(payloads):
-            if usage is None:
-                usage = goz_usage_window(payload, metadata)
-            if limit_reason is None:
-                error_message, error_metadata = goz_error_details(payload)
-                if error_metadata:
-                    metadata.update(error_metadata)
-                if error_message:
-                    metadata.setdefault("error_message", error_message)
-                    limit_reason = classify_execution_limit(error_message)
-        return self.usage_observation_from_scan(
-            execution,
-            provider="z.ai",
-            usage=usage,
-            limit_reason=limit_reason,
-            metadata=metadata,
-            saw_payloads=bool(payloads),
-            require_payloads=True,
-            stderr_limit_extractor=lambda stderr, _: classify_execution_limit(stderr),
-        )
+    def transcript_error_text(self, execution) -> str:
+        return "\n".join(extract_goz_errors(execution.stdout)).strip()
+
+    def usage_window_from_payload(self, payload, metadata):
+        return goz_usage_window(payload, metadata)
+
+    def error_details_from_payload(self, payload):
+        error_message, error_metadata = goz_error_details(payload)
+        return error_message, error_metadata, None
+
+    def classify_stderr_limit(self, stderr, metadata):
+        return self.classify_limit_text(stderr, metadata)
 
     def stream_event_adapter(self):
         return goz_stream_event_adapter()
 
-    def translate_native_event(
-        self,
-        native_payload: dict[str, object],
-    ) -> UnifiedEvent | None:
-        return super().translate_native_event(native_payload)
-
-    def extract_continuation(
-        self,
-        execution: CLIExecutionResult | None,
-    ) -> RuntimeEngineContinuation | None:
-        return self.extract_continuation_from_payloads(execution, goz_continuation)
+    def continuation_from_payload(self, payload):
+        return goz_continuation(payload)

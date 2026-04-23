@@ -15,9 +15,7 @@ from heru.adapters._opencode_impl import (
     opencode_stream_event_adapter,
     opencode_usage_window,
 )
-from heru.adapters.common import classify_execution_limit
-from heru.base import CLIExecutionResult, ExternalCLIAdapter, iter_jsonl_payloads
-from heru.types import RuntimeEngineContinuation, UnifiedEvent
+from heru.base import ExternalCLIAdapter
 
 _extract_opencode_transcript = extract_opencode_transcript
 
@@ -27,13 +25,16 @@ class OpenCodeAdapter(ExternalCLIAdapter):
 
     DEFAULT_NAME = "opencode"
     DEFAULT_BINARY = "opencode"
+    DEFAULT_MODEL = "zai-coding-plan/glm-4.6"
     DEFAULT_CAPABILITIES = ExternalCLIAdapter.DEFAULT_CAPABILITIES.__class__(
         supports_model_override=True,
         strips_environment=True,
         transcript_format="jsonl",
     )
-    def supports_continue_latest(self) -> bool:
-        return True
+    SUPPORTS_CONTINUE_LATEST = True
+    TRANSCRIPT_EMPTY_ON_PARSED_PAYLOADS = True
+    USAGE_PROVIDER = "z.ai"
+    REQUIRE_USAGE_PAYLOADS = True
 
     DEFAULT_STRIPPED_ENV_VARS = (
         "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_PROFILE", "AWS_REGION",
@@ -74,50 +75,24 @@ class OpenCodeAdapter(ExternalCLIAdapter):
         command.append(prompt)
         return command
 
-    def render_transcript(self, execution: CLIExecutionResult) -> str:
-        return self.render_transcript_from_parts(
-            execution,
-            assistant_text=extract_opencode_transcript(execution.stdout),
-            error_text=extract_opencode_errors(execution.stdout).strip(),
-        )
+    def transcript_assistant_text(self, execution) -> str:
+        return extract_opencode_transcript(execution.stdout)
 
-    def extract_usage_observation(self, execution: CLIExecutionResult):
-        payloads = iter_jsonl_payloads(execution.stdout)
-        metadata: dict[str, str | int | bool | None] = {}
-        usage = None
-        limit_reason = None
-        for payload in reversed(payloads):
-            if usage is None:
-                usage = opencode_usage_window(payload, metadata)
-            if limit_reason is None:
-                error_message, error_metadata = opencode_error_details(payload)
-                if error_metadata:
-                    metadata.update(error_metadata)
-                if error_message:
-                    metadata.setdefault("error_message", error_message)
-                    limit_reason = classify_execution_limit(error_message)
-        return self.usage_observation_from_scan(
-            execution,
-            provider="z.ai",
-            usage=usage,
-            limit_reason=limit_reason,
-            metadata=metadata,
-            saw_payloads=bool(payloads),
-            require_payloads=True,
-            stderr_limit_extractor=lambda stderr, _: classify_execution_limit(stderr),
-        )
+    def transcript_error_text(self, execution) -> str:
+        return extract_opencode_errors(execution.stdout).strip()
+
+    def usage_window_from_payload(self, payload, metadata):
+        return opencode_usage_window(payload, metadata)
+
+    def error_details_from_payload(self, payload):
+        error_message, error_metadata = opencode_error_details(payload)
+        return error_message, error_metadata, None
+
+    def classify_stderr_limit(self, stderr, metadata):
+        return self.classify_limit_text(stderr, metadata)
 
     def stream_event_adapter(self):
         return opencode_stream_event_adapter()
 
-    def translate_native_event(
-        self,
-        native_payload: dict[str, object],
-    ) -> UnifiedEvent | None:
-        return super().translate_native_event(native_payload)
-
-    def extract_continuation(
-        self,
-        execution: CLIExecutionResult | None,
-    ) -> RuntimeEngineContinuation | None:
-        return self.extract_continuation_from_payloads(execution, opencode_continuation)
+    def continuation_from_payload(self, payload):
+        return opencode_continuation(payload)

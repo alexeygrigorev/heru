@@ -304,6 +304,7 @@ def test_extract_usage_observation_and_continuation_match_fixture_contract(
                 "--json",
                 "--dangerously-bypass-approvals-and-sandbox",
                 "--skip-git-repo-check",
+                "--last",
                 "continue please",
             ],
         ),
@@ -311,7 +312,7 @@ def test_extract_usage_observation_and_continuation_match_fixture_contract(
             "claude",
             [
                 "claude",
-                "--resume",
+                "--continue",
                 "-p",
                 "continue please",
                 "--output-format",

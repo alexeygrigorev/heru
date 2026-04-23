@@ -1,13 +1,10 @@
 """Tests for proactive codex quota checking."""
 
 import json
-import time
 
 import pytest
 
 from heru.quota.codex_quota import (
-    CodexQuotaStatus,
-    CodexQuotaWindow,
     _parse_quota_response,
     _read_bearer_token,
     check_codex_quota,
@@ -76,25 +73,21 @@ def _make_api_response(
 def test_parse_limit_not_reached():
     status = _parse_quota_response(_make_api_response(limit_reached=False))
     assert status.limit_reached is False
-    assert status.primary_window.used_percent == 50.0
-    assert status.secondary_window.used_percent == 20.0
-    assert status.primary_window.reset_at == "2026-04-08T05:00:00Z"
-    assert status.secondary_window.reset_at == "2026-04-13T00:00:00Z"
-    assert status.max_used_percent == 50.0
-    assert status.earliest_reset_at == "2026-04-13T00:00:00Z"
+    assert status.short_term.percent_remaining == 100.0
+    assert status.long_term.percent_remaining == 80.0
+    assert status.long_term.reset_at == "2026-04-13T00:00:00Z"
 
 
 def test_parse_limit_reached():
-    status = _parse_quota_response(_make_api_response(limit_reached=True, primary_pct=100.0))
+    status = _parse_quota_response(_make_api_response(limit_reached=True, secondary_pct=85.0))
     assert status.limit_reached is True
-    assert status.max_used_percent == 100.0
 
 
 def test_parse_empty_response():
     status = _parse_quota_response({})
     assert status.limit_reached is False
-    assert status.primary_window.used_percent == 0.0
-    assert status.secondary_window.used_percent == 0.0
+    assert status.short_term.percent_remaining == 100.0
+    assert status.long_term.percent_remaining == 100.0
 
 
 # --- Quota check with caching ---
@@ -105,7 +98,7 @@ def test_check_quota_limit_reached(tmp_path):
     auth.write_text(json.dumps({"tokens": {"access_token": "tok"}}))
 
     def fake_fetch(token):
-        return _parse_quota_response(_make_api_response(limit_reached=True, primary_pct=100.0))
+        return _parse_quota_response(_make_api_response(limit_reached=True, secondary_pct=85.0))
 
     status = check_codex_quota(auth_path=auth, _fetch=fake_fetch)
     assert status.limit_reached is True
@@ -116,7 +109,7 @@ def test_check_quota_not_reached(tmp_path):
     auth.write_text(json.dumps({"tokens": {"access_token": "tok"}}))
 
     def fake_fetch(token):
-        return _parse_quota_response(_make_api_response(limit_reached=False, primary_pct=30.0))
+        return _parse_quota_response(_make_api_response(limit_reached=False, secondary_pct=30.0))
 
     status = check_codex_quota(auth_path=auth, _fetch=fake_fetch)
     assert status.limit_reached is False
@@ -171,8 +164,7 @@ def test_block_reason_limit_reached(tmp_path):
         return _parse_quota_response(
             _make_api_response(
                 limit_reached=True,
-                primary_pct=100.0,
-                primary_reset="2026-04-08T05:00:00Z",
+                secondary_pct=100.0,
             )
         )
 
@@ -201,5 +193,5 @@ def test_block_reason_fail_open(tmp_path):
 
 
 # Monitoring integration tests live in the litehive test suite — they exercise
-# litehive.observability.record_codex_quota_check against heru's CodexQuotaStatus,
+# litehive.observability.record_codex_quota_check against heru's UsageStatus,
 # which is a litehive-side concern.

@@ -1,20 +1,11 @@
 id: T-0001
 slug: unified-jsonl-event-output-across-all-engines
 title: Unified JSONL event output across all engines
-depends_on: []
-task_type: null
-model: null
-mode: implementation
-pipeline_mode: full
-status: done
-flag_reason: null
-flag_count: 0
-pipeline_status: done
-priority: high
-pm_complexity: moderate
-planned_effort: m
 created_at: '2026-04-10T18:48:58+00:00'
-updated_at: '2026-04-10T19:14:42+00:00'
+task_type: null
+pipeline_mode: full
+priority: high
+depends_on: []
 goal: Today each heru adapter (codex, claude, copilot, gemini, opencode, goz) streams
   its engine's native JSONL payloads directly to stdout. Callers have to parse 6 different
   event schemas to extract agent messages, tool calls, tool outputs, errors, and usage.
@@ -37,55 +28,7 @@ acceptance_criteria:
 - Docs section in README.md describing the unified event schema
 constraints: []
 plan: []
-human_checkpoints: []
-subagents:
-- id: SA-0001
-  role: planner
-  engine: codex
-  status: completed
-  path: subagents/SA-0001-planner
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0002
-  role: swe
-  engine: codex
-  status: completed
-  path: subagents/SA-0002-swe
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0003
-  role: qa
-  engine: codex
-  status: completed
-  path: subagents/SA-0003-qa
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0004
-  role: reviewer
-  engine: codex
-  status: completed
-  path: subagents/SA-0004-reviewer
-  sandboxed: false
-  sandbox_summary: host
-- id: SA-0005
-  role: merge-resolver
-  engine: codex
-  status: completed
-  path: subagents/SA-0005-merge-resolver
-  sandboxed: false
-  sandbox_summary: host
 git:
   auto_commit: true
   commit_message: 'litehive: complete T-0001 unified-jsonl-event-output-across-all-engines'
-  commit_sha: c944ea5c94a64ac30dfa4f9a620a14a79d5e50c9
-  checkpoint_base_sha: 75304d7d231e1fbae8b2786c2d7c7252aad2a992
-  checkpoint_attempts: 1
-  rolled_back_checkpoint_attempt: null
-  merge_agent_attempts: 1
-  worktree_path: null
-retry_policy:
-  max_retries: null
-  stage_retry_limit: null
 created_from: null
-upstream_origin: null
-github_origin: null
