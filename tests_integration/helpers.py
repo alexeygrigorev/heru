@@ -7,15 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+import quse
 
 from heru import extract_engine_continuation, get_engine
 from heru.base import CLIExecutionResult, ExternalCLIAdapter, LATEST_CONTINUATION_SENTINEL
-from heru.quota import (
-    claude_quota_block_reason,
-    codex_quota_block_reason,
-    copilot_quota_block_reason,
-    zai_quota_block_reason,
-)
 from heru.types import RuntimeEngineContinuation
 
 
@@ -53,13 +48,13 @@ def require_enabled_engine(engine_name: str) -> None:
 def _engine_quota_block_reason(engine_name: str) -> str | None:
     try:
         if engine_name == "codex":
-            return codex_quota_block_reason()
+            return quse.codex_quota_block_reason()
         if engine_name == "claude":
-            return claude_quota_block_reason()
+            return quse.claude_quota_block_reason()
         if engine_name == "copilot":
-            return copilot_quota_block_reason()
+            return quse.copilot_quota_block_reason()
         if engine_name in {"goz", "opencode"}:
-            return zai_quota_block_reason()
+            return quse.zai_quota_block_reason()
     except Exception:
         return None
     return None

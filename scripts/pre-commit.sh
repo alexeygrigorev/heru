@@ -6,7 +6,6 @@ SMOKE_TESTS=(
   "tests/test_runner_workflow.py"
   "tests/test_engine_variants_and_timeline.py"
   "tests/test_heru_cli.py"
-  "tests/test_codex_quota.py"
   "tests/test_observability_and_status.py"
 )
 

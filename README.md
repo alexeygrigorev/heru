@@ -33,39 +33,18 @@ heru codex --resume <session-id> "now also run the tests"
 # Different engine, same CLI shape
 heru claude "find the bug in src/foo.py"
 
-# Deprecated for one release
-heru "find the bug in src/foo.py" --engine claude
-
-# Show usage for every supported provider with a usage endpoint
-heru usage
-
-# Show usage for one provider
-heru usage codex
-
-# Machine-readable output
-heru usage copilot --json
-
-# Gemini does not expose a usage endpoint yet
-heru usage gemini
 ```
 
 All output is streamed as unified JSONL by default. Pass `--raw` to get
 the engine's native JSON/JSONL stream back for debugging.
 
-`heru usage` prints one human-readable line per provider for `codex`,
-`claude`, `copilot`, and `zai`. Every supported provider now returns the
-same shape: exactly two windows, `short_term` and `long_term`, each with
-`percent_remaining` and `reset_at`. `--json` emits that same schema
-directly. `gemini` is accepted for the single-provider form and reports
-`unsupported` because it does not currently expose a usage endpoint.
+The engine name is positional. The legacy `--engine` CLI form was removed
+in `v2.0.0`; see [CHANGELOG.md](CHANGELOG.md) and
+[`docs/migrations/2.0.0-remove-legacy-engine-flag.md`](docs/migrations/2.0.0-remove-legacy-engine-flag.md).
 
-Provider mapping:
-
-- `codex`: `short_term` is hardcoded to `100%` remaining, `long_term` maps to the weekly API window.
-- `claude`: `short_term` maps to the 5-hour signal, `long_term` maps to the 7-day signal.
-- `copilot`: `short_term` is hardcoded to `100%` remaining, `long_term` maps to the monthly premium-interactions signal.
-- `zai`: `short_term` maps to the tokens signal only, `long_term` is hardcoded to `100%` remaining.
-- `gemini`: unsupported.
+Cross-provider usage/quota reporting lives in
+[quse](https://github.com/alexeygrigorev/quse). Use `quse` directly for
+normalized quota windows.
 
 ## Unified Event Schema
 
@@ -101,7 +80,7 @@ uv add heru
 
 ## Status
 
-**v1.0.0 is a physical extraction from
+**v2.0.0 is a physical extraction from
 [litehive](https://github.com/alexeygrigorev/litehive),** which uses
 heru as its engine execution layer. Several things from the vision
 above are still in flight:
@@ -118,12 +97,11 @@ above are still in flight:
 ```
 heru/
   adapters/    per-engine CLI wrappers (codex, claude, copilot, gemini, opencode, goz)
-  quota/       unified provider quota / rate-limit parsing
   base.py      ExternalCLIAdapter base class + CLIInvocation
   types.py     shared engine/stream/usage types
   main.py      entrypoint for `heru <engine> <prompt>`
 
-tests/         unit tests for adapters, quota parsing, inactivity timeout
+tests/         unit tests for adapters, stream parsing, inactivity timeout
 ```
 
 `tests/contract/` is the standalone public-API contract suite. Treat it as the
@@ -160,7 +138,7 @@ breaking changes and require a semver-major release.
 ### `heru.types` models
 
 - `EngineUsageWindow`: normalized usage-window counters and reset metadata extracted from provider output.
-- `EngineUsageObservation`: normalized per-run usage or quota observation reported by adapters and quota helpers.
+- `EngineUsageObservation`: normalized per-run usage or quota observation reported by adapters.
 - `UnifiedEvent`: stable JSONL event schema emitted across engines.
 - `LiveEvent`: a `UnifiedEvent` instance used inside live timelines.
 - `LiveTimeline`: ordered live-event container with summary counts and task/subagent metadata.
@@ -191,6 +169,8 @@ stable contract.
 | --- | --- |
 | `v0.1.0` | Initial extracted public contract. No documented breaking public API changes yet. |
 | `v1.0.0` | Breaking change: provider-specific quota dataclasses and CLI fields replaced by unified `short_term` / `long_term` usage windows. |
+| `v2.0.0` | Breaking change: removed the legacy prompt-first `--engine` form; positional `heru <engine> <prompt>` is now required. |
+| `v2.1.0` | Breaking change: removed `heru usage`; use `quse` for normalized quota reporting. |
 
 ### Submitting A Breaking Change
 
@@ -234,10 +214,9 @@ cd ../litehive && uv run pytest -q \
   tests/test_runner_workflow.py \
   tests/test_engine_variants_and_timeline.py \
   tests/test_heru_cli.py \
-  tests/test_codex_quota.py \
   tests/test_observability_and_status.py
 ```
 
 The hook looks for litehive in a sibling checkout at `../litehive`, then falls back to `LITEHIVE_REPO`. If neither exists, it prints a warning and skips the smoke run so standalone heru users are not blocked.
 
-The smoke suite is intended to protect the editable-install contract between heru and litehive: litehive imports heru directly from your local checkout, so breaking `heru` method names, CLI argv shape, event schema, or quota helpers can regress litehive immediately. If you need to bypass the hook intentionally, commit with `git commit --no-verify`, but that should be the exception rather than the default workflow.
+The smoke suite is intended to protect the editable-install contract between heru and litehive: litehive imports heru directly from your local checkout, so breaking `heru` method names, CLI argv shape, or event schema can regress litehive immediately. If you need to bypass the hook intentionally, commit with `git commit --no-verify`, but that should be the exception rather than the default workflow.

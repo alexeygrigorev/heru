@@ -3,8 +3,6 @@ import selectors
 import subprocess
 from itertools import chain, repeat
 
-import pytest
-
 from heru.base import (
     AdapterCapabilities,
     CLIExecutionResult,

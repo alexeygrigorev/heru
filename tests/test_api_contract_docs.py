@@ -1,21 +1,7 @@
 import ast
-import inspect
 from pathlib import Path
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-import heru
-import heru.base as base
-import heru.main as main_module
-import heru.types as types_module
-from heru.adapters.claude import ClaudeCLIAdapter
-from heru.adapters.codex import CodexCLIAdapter
-from heru.adapters.copilot import CopilotCLIAdapter
-from heru.adapters.gemini import GeminiCLIAdapter
-from heru.adapters.goz import GozCLIAdapter
-from heru.adapters.opencode import OpenCodeAdapter
 
 
 README = ROOT / "README.md"

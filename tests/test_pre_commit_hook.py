@@ -46,7 +46,6 @@ def _create_litehive_repo(path: Path) -> None:
         "test_runner_workflow.py",
         "test_engine_variants_and_timeline.py",
         "test_heru_cli.py",
-        "test_codex_quota.py",
         "test_observability_and_status.py",
     ):
         (path / "tests" / test_name).write_text("", encoding="utf-8")
@@ -111,7 +110,6 @@ def test_pre_commit_runs_litehive_smoke_tests_against_staged_state(tmp_path: Pat
         "tests/test_runner_workflow.py",
         "tests/test_engine_variants_and_timeline.py",
         "tests/test_heru_cli.py",
-        "tests/test_codex_quota.py",
         "tests/test_observability_and_status.py",
     ]
     assert recorded["heru_init"] == "VALUE = 'staged'\n"

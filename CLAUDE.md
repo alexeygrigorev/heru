@@ -30,8 +30,7 @@ authoritative long version.
    every commit:
    ```
    cd ~/git/litehive && uv run pytest tests/test_runner_workflow.py \
-       tests/test_engine_variants_and_timeline.py \
-       tests/test_heru_cli.py tests/test_codex_quota.py -q
+       tests/test_engine_variants_and_timeline.py tests/test_heru_cli.py -q
    ```
 3. **`StageReport` and friends are litehive concepts** — they live in
    `heru/types.py` temporarily and will move. Don't extend them here.
@@ -73,8 +72,7 @@ heru/
 │   ├── base.py            # ExternalCLIAdapter, CLIInvocation, run_live
 │   ├── types.py           # shared pydantic types
 │   ├── main.py            # `heru <engine> <prompt>` entry
-│   ├── adapters/          # one module per engine (+ _impl helpers)
-│   └── quota/             # per-provider quota checks
+│   └── adapters/          # one module per engine (+ _impl helpers)
 ├── tests/                 # default standalone fixture-only pytest suite
 ├── tests_integration/     # opt-in real-CLI smoke tests
 ├── pyproject.toml
