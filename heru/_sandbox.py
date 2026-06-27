@@ -142,7 +142,9 @@ class SandboxedAdapter(ExternalCLIAdapter):
         max_turns: int | None = None,
         resume_session_id: str | None = None,
         on_started=None,
+        extra_env=None,
         emit_unified: bool = False,
+        launch_profile=None,
     ) -> CLIExecutionResult:
         if has_callable_override(self._adapter, "run", ORIGINAL_EXTERNAL_ADAPTER_RUN):
             run_callable = effective_engine_callable(self._adapter, "run")
@@ -155,6 +157,10 @@ class SandboxedAdapter(ExternalCLIAdapter):
                 run_kwargs["resume_session_id"] = resume_session_id
             if on_started is not None:
                 run_kwargs["on_started"] = on_started
+            if extra_env is not None:
+                run_kwargs["extra_env"] = extra_env
+            if launch_profile is not None:
+                run_kwargs["launch_profile"] = launch_profile
             run_kwargs["emit_unified"] = emit_unified
             return run_callable(
                 prompt,
@@ -168,7 +174,9 @@ class SandboxedAdapter(ExternalCLIAdapter):
             max_turns=max_turns,
             resume_session_id=resume_session_id,
             on_started=on_started,
+            extra_env=extra_env,
             emit_unified=emit_unified,
+            launch_profile=launch_profile,
         )
 
     def run_live(
@@ -182,7 +190,9 @@ class SandboxedAdapter(ExternalCLIAdapter):
         on_started=None,
         on_update=None,
         inactivity_timeout_seconds: float = 0,
+        extra_env=None,
         emit_unified: bool = False,
+        launch_profile=None,
     ) -> CLIExecutionResult:
         if has_callable_override(self._adapter, "run_live", ORIGINAL_EXTERNAL_ADAPTER_RUN_LIVE):
             run_live_callable = effective_engine_callable(self._adapter, "run_live")
@@ -199,6 +209,10 @@ class SandboxedAdapter(ExternalCLIAdapter):
                 run_live_kwargs["on_update"] = on_update
             if inactivity_timeout_seconds > 0:
                 run_live_kwargs["inactivity_timeout_seconds"] = inactivity_timeout_seconds
+            if extra_env is not None:
+                run_live_kwargs["extra_env"] = extra_env
+            if launch_profile is not None:
+                run_live_kwargs["launch_profile"] = launch_profile
             run_live_kwargs["emit_unified"] = emit_unified
             return run_live_callable(
                 prompt,
@@ -214,7 +228,9 @@ class SandboxedAdapter(ExternalCLIAdapter):
             on_started=on_started,
             on_update=on_update,
             inactivity_timeout_seconds=inactivity_timeout_seconds,
+            extra_env=extra_env,
             emit_unified=emit_unified,
+            launch_profile=launch_profile,
         )
 
     def render_transcript(self, execution: CLIExecutionResult) -> str:

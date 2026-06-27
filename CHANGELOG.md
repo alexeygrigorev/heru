@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.1 - 2026-06-27
+
+- Added launch profiles with `heru <engine> --profile <name>`.
+- Profiles can override the launch command, set environment variables, unset
+  environment variables from files, and run preflight commands.
+- Documented Z.AI-routed `zodex` and `zlaude` profile examples without adding
+  them as first-class engines.
+- Added CI publishing on `v*` tag pushes.
+
 ## 2.1.0 - 2026-05-24
 
 - Removed the `heru usage` convenience command.

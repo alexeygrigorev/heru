@@ -10,6 +10,7 @@ from heru.base import (
     StreamEventAdapter,
     build_invocation_env,
 )
+from heru.profiles import LaunchProfile
 from heru.types import EngineUsageWindow, LiveEvent, RuntimeEngineContinuation
 
 
@@ -242,6 +243,57 @@ def test_build_invocation_env_keeps_python_env_inside_workspace(monkeypatch, tmp
     )
 
     assert env["VIRTUAL_ENV"] == "/tmp/venv"
+
+
+def test_launch_profile_applies_command_and_environment(tmp_path: Path) -> None:
+    adapter = _LiveAdapter(tmp_path / "agent.py")
+    invocation = adapter.build_invocation(
+        "ship it",
+        tmp_path,
+        extra_env={"OPENAI_API_KEY": "normal", "KEEP": "old"},
+    )
+    profile = LaunchProfile(
+        name="zodex",
+        engine="codex",
+        command=("python", "wrapper.py"),
+        env={"CODEX_HOME": str(tmp_path / ".zodex"), "KEEP": "new"},
+        unset_env=("OPENAI_API_KEY",),
+    )
+
+    profiled = adapter.apply_launch_profile(invocation, profile)
+
+    assert profiled.argv == ("python", "wrapper.py", str(tmp_path / "agent.py"))
+    assert "OPENAI_API_KEY" not in profiled.env
+    assert profiled.env["CODEX_HOME"] == str(tmp_path / ".zodex")
+    assert profiled.env["KEEP"] == "new"
+
+
+def test_launch_profile_preflight_failure_returns_execution_result(monkeypatch, tmp_path: Path) -> None:
+    adapter = _LiveAdapter(tmp_path / "agent.py")
+    profile = LaunchProfile(
+        name="zodex",
+        engine="codex",
+        preflight=(("preflight", "fail"),),
+    )
+
+    def fake_run(*args, **kwargs):
+        del args, kwargs
+        return subprocess.CompletedProcess(
+            ["preflight", "fail"],
+            42,
+            stdout="setup out\n",
+            stderr="setup err\n",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = adapter.run("ship it", tmp_path, launch_profile=profile)
+
+    assert result.exit_code == 42
+    assert result.stdout == ""
+    assert "Launch profile 'zodex' preflight failed" in result.stderr
+    assert "setup out" in result.stderr
+    assert "setup err" in result.stderr
 
 
 def test_extract_continuation_from_run_live_output(tmp_path: Path) -> None:

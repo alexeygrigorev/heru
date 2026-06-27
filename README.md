@@ -33,6 +33,9 @@ heru codex --resume <session-id> "now also run the tests"
 # Different engine, same CLI shape
 heru claude "find the bug in src/foo.py"
 
+# Apply a launch profile without changing the engine/parser
+heru codex --profile zodex "run the subagent smoke test"
+
 ```
 
 All output is streamed as unified JSONL by default. Pass `--raw` to get
@@ -45,6 +48,49 @@ in `v2.0.0`; see [CHANGELOG.md](CHANGELOG.md) and
 Cross-provider usage/quota reporting lives in
 [quse](https://github.com/alexeygrigorev/quse). Use `quse` directly for
 normalized quota windows.
+
+## Launch Profiles
+
+Use `--profile` (`-p`) when an engine should launch with a different wrapper,
+config directory, environment cleanup, or preflight command while keeping the
+same engine parser and unified event output.
+
+Profiles are read from `~/.config/heru/profiles.toml`, or from the path in
+`HERU_PROFILES_FILE`.
+
+Example for a Z.AI-routed Codex profile managed by
+[`~/git/.agents`](https://github.com/alexeygrigorev/.agents):
+
+```toml
+[profiles.zodex]
+engine = "codex"
+command = "codex"
+unset_env_file = "~/git/.agents/config/codex/zodex_env_unset.txt"
+preflight = [["~/git/.agents/scripts/zodex_start_proxy.sh"]]
+
+[profiles.zodex.env]
+CODEX_HOME = "~/.zodex"
+```
+
+If you have a real wrapper executable, use it as `command = "zodex"` instead.
+
+Then run:
+
+```bash
+heru codex --profile zodex "spawn one Python subagent and summarize the result"
+```
+
+Claude-style profile wrappers work the same way:
+
+```toml
+[profiles.zlaude]
+engine = "claude"
+command = "claude"
+unset_env_file = "~/git/.agents/config/claude/zlaude_env_unset.txt"
+
+[profiles.zlaude.env]
+CLAUDE_CONFIG_DIR = "~/.zlaude"
+```
 
 ## Unified Event Schema
 
@@ -119,6 +165,7 @@ breaking changes and require a semver-major release.
 - `heru.get_engine(name)`: resolves a stable engine name such as `codex` or `claude` to the adapter instance heru will execute.
 - `heru.ENGINE_CHOICES`: lists the stable engine names accepted by the CLI and `get_engine`.
 - `heru.main.main(argv=None)`: provides the public `heru` CLI entrypoint and preserves the supported argument contract.
+- `heru <engine> --profile <name> <prompt>`: applies a launch profile from `~/.config/heru/profiles.toml` or `HERU_PROFILES_FILE` without changing engine identity.
 
 ### Base adapter contract
 

@@ -16,6 +16,7 @@ import typer
 
 from heru import ENGINE_CHOICES, get_engine
 from heru.base import LATEST_CONTINUATION_SENTINEL
+from heru.profiles import LaunchProfileError, resolve_launch_profile
 
 app = typer.Typer(
     add_completion=False,
@@ -32,6 +33,7 @@ def _run_engine(
     max_turns: int | None = None,
     resume: str | None = None,
     continue_latest: bool = False,
+    profile: str | None = None,
     raw: bool = False,
 ) -> int:
     engine = get_engine(engine_name)
@@ -48,9 +50,19 @@ def _run_engine(
         "max_turns": max_turns,
         "resume_session_id": resume,
     }
+    if profile is not None:
+        try:
+            run_kwargs["launch_profile"] = resolve_launch_profile(profile, engine_name=engine_name)
+        except LaunchProfileError as exc:
+            raise click.ClickException(str(exc)) from exc
     if "emit_unified" in inspect.signature(engine.run).parameters:
         run_kwargs["emit_unified"] = not raw
-    execution = engine.run(prompt, cwd.resolve(), **run_kwargs)
+    run_parameters = inspect.signature(engine.run).parameters
+    execution = engine.run(
+        prompt,
+        cwd.resolve(),
+        **{key: value for key, value in run_kwargs.items() if key in run_parameters},
+    )
     if execution.stdout:
         sys.stdout.write(execution.stdout)
     if execution.stderr:
@@ -70,6 +82,10 @@ ContinueOption = Annotated[
     bool,
     typer.Option("--continue", help="Resume the most recent session for this engine."),
 ]
+ProfileOption = Annotated[
+    str | None,
+    typer.Option("--profile", "-p", help="Apply a heru launch profile from profiles.toml."),
+]
 RawOption = Annotated[bool, typer.Option(help="Emit the engine's raw JSON/JSONL output.")]
 
 
@@ -81,6 +97,7 @@ def _engine_command_factory(engine_name: str):
         max_turns: MaxTurnsOption = None,
         resume: ResumeOption = None,
         continue_: ContinueOption = False,
+        profile: ProfileOption = None,
         raw: RawOption = False,
     ) -> int:
         return _run_engine(
@@ -91,6 +108,7 @@ def _engine_command_factory(engine_name: str):
             max_turns=max_turns,
             resume=resume,
             continue_latest=continue_,
+            profile=profile,
             raw=raw,
         )
 

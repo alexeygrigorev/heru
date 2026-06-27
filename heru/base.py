@@ -17,6 +17,7 @@ import subprocess
 import time
 from typing import Callable, Literal
 
+from heru.profiles import LaunchProfile
 from heru.types import (
     EngineUsageObservation,
     EngineUsageWindow,
@@ -263,6 +264,76 @@ class ExternalCLIAdapter:
     def finalize_invocation(self, invocation: CLIInvocation) -> CLIInvocation:
         return invocation
 
+    def apply_launch_profile(self, invocation: CLIInvocation, profile: LaunchProfile) -> CLIInvocation:
+        argv = invocation.argv
+        if profile.command is not None:
+            argv = tuple(profile.command) + invocation.argv[1:]
+
+        env = dict(invocation.env)
+        for key in profile.unset_env:
+            env.pop(key, None)
+        if profile.env:
+            env.update(profile.env)
+
+        return replace(invocation, argv=argv, env=env)
+
+    def _build_profiled_invocation(
+        self,
+        prompt: str,
+        cwd: Path,
+        model: str | None = None,
+        *,
+        max_turns: int | None = None,
+        resume_session_id: str | None = None,
+        extra_env: dict[str, str] | None = None,
+        launch_profile: LaunchProfile | None = None,
+    ) -> CLIInvocation:
+        invocation = self.build_invocation(
+            prompt,
+            cwd,
+            model=model,
+            max_turns=max_turns,
+            resume_session_id=resume_session_id,
+            extra_env=extra_env,
+        )
+        if launch_profile is not None:
+            invocation = self.apply_launch_profile(invocation, launch_profile)
+        return invocation
+
+    def _run_launch_profile_preflight(
+        self,
+        invocation: CLIInvocation,
+        launch_profile: LaunchProfile | None,
+    ) -> CLIExecutionResult | None:
+        if launch_profile is None or not launch_profile.preflight:
+            return None
+        for command in launch_profile.preflight:
+            result = subprocess.run(
+                command,
+                cwd=str(invocation.cwd),
+                env=invocation.env,
+                text=True,
+                capture_output=True,
+            )
+            if result.returncode == 0:
+                continue
+            stderr_parts = [
+                f"[heru] Launch profile '{launch_profile.name}' preflight failed: {list(command)}"
+            ]
+            if result.stdout.strip():
+                stderr_parts.append(f"[preflight stdout]\n{result.stdout.strip()}")
+            if result.stderr.strip():
+                stderr_parts.append(f"[preflight stderr]\n{result.stderr.strip()}")
+            return CLIExecutionResult(
+                adapter=self.name,
+                argv=invocation.argv,
+                cwd=invocation.cwd,
+                exit_code=result.returncode,
+                stdout="",
+                stderr="\n\n".join(stderr_parts) + "\n",
+            )
+        return None
+
     def sandbox_details(self) -> tuple[bool, str]:
         return (False, "")
 
@@ -277,11 +348,21 @@ class ExternalCLIAdapter:
         on_started: Callable[[int], None] | None = None,
         extra_env: dict[str, str] | None = None,
         emit_unified: bool = False,
+        launch_profile: LaunchProfile | None = None,
     ) -> CLIExecutionResult:
-        invocation = self.finalize_invocation(
-            self.build_invocation(prompt, cwd, model=model, max_turns=max_turns,
-                                  resume_session_id=resume_session_id, extra_env=extra_env)
+        invocation = self._build_profiled_invocation(
+            prompt,
+            cwd,
+            model=model,
+            max_turns=max_turns,
+            resume_session_id=resume_session_id,
+            extra_env=extra_env,
+            launch_profile=launch_profile,
         )
+        preflight_failure = self._run_launch_profile_preflight(invocation, launch_profile)
+        if preflight_failure is not None:
+            return preflight_failure
+        invocation = self.finalize_invocation(invocation)
         sandboxed, sandbox_summary = self.sandbox_details()
         proc = subprocess.Popen(
             invocation.argv,
@@ -322,11 +403,21 @@ class ExternalCLIAdapter:
         inactivity_timeout_seconds: float = 0,
         extra_env: dict[str, str] | None = None,
         emit_unified: bool = False,
+        launch_profile: LaunchProfile | None = None,
     ) -> CLIExecutionResult:
-        invocation = self.finalize_invocation(
-            self.build_invocation(prompt, cwd, model=model, max_turns=max_turns,
-                                  resume_session_id=resume_session_id, extra_env=extra_env)
+        invocation = self._build_profiled_invocation(
+            prompt,
+            cwd,
+            model=model,
+            max_turns=max_turns,
+            resume_session_id=resume_session_id,
+            extra_env=extra_env,
+            launch_profile=launch_profile,
         )
+        preflight_failure = self._run_launch_profile_preflight(invocation, launch_profile)
+        if preflight_failure is not None:
+            return preflight_failure
+        invocation = self.finalize_invocation(invocation)
         sandboxed, sandbox_summary = self.sandbox_details()
         proc = subprocess.Popen(
             invocation.argv,

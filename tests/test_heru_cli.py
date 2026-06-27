@@ -193,8 +193,66 @@ def test_engine_help_shows_shared_options(engine_name: str) -> None:
     result = runner.invoke(app, [engine_name, "--help"])
 
     assert result.exit_code == 0
-    for option in ("--cwd", "--model", "--max-turns", "--resume", "--continue", "--raw"):
+    for option in ("--cwd", "--model", "--max-turns", "--resume", "--continue", "--profile", "--raw"):
         assert option in result.stdout
+
+
+def test_cli_resolves_launch_profile_without_new_engine(monkeypatch, tmp_path: Path) -> None:
+    profiles_file = tmp_path / "profiles.toml"
+    profiles_file.write_text(
+        """
+[profiles.zodex]
+engine = "codex"
+command = "zodex"
+
+[profiles.zodex.env]
+CODEX_HOME = "/tmp/zodex-home"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERU_PROFILES_FILE", str(profiles_file))
+    engine = get_engine("codex")
+    calls: dict[str, object] = {}
+
+    def fake_run(
+        prompt: str,
+        cwd: Path,
+        model: str | None = None,
+        *,
+        max_turns: int | None = None,
+        resume_session_id: str | None = None,
+        launch_profile=None,
+        emit_unified: bool = False,
+    ) -> CLIExecutionResult:
+        del model, max_turns, resume_session_id, emit_unified
+        calls["prompt"] = prompt
+        calls["cwd"] = cwd
+        calls["profile_name"] = launch_profile.name
+        calls["profile_engine"] = launch_profile.engine
+        calls["profile_command"] = launch_profile.command
+        calls["profile_env"] = launch_profile.env
+        return CLIExecutionResult(
+            adapter="codex",
+            argv=("codex", prompt),
+            cwd=cwd,
+            exit_code=0,
+            stdout="done\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(engine, "run", fake_run)
+
+    exit_code = main(["codex", "ship it", "--cwd", str(tmp_path), "--profile", "zodex"])
+
+    assert exit_code == 0
+    assert calls == {
+        "prompt": "ship it",
+        "cwd": tmp_path.resolve(),
+        "profile_name": "zodex",
+        "profile_engine": "codex",
+        "profile_command": ("zodex",),
+        "profile_env": {"CODEX_HOME": "/tmp/zodex-home"},
+    }
 
 
 def test_prompt_first_engine_flag_is_rejected(capsys) -> None:
